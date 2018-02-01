@@ -1,5 +1,12 @@
 package chat;
 
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
 import java.rmi.RemoteException;
 import java.util.ArrayList;
 import java.util.List;
@@ -7,11 +14,46 @@ import java.util.List;
 public class Server implements ServerInterface {
 	private List<ClientInterface> clientList;
 	private List<Tuple<String, String>> history;
+	private File historyFile;
 	
 	public Server(){
 		clientList = new ArrayList<ClientInterface>();
 		history = new ArrayList<Tuple<String, String>>();
+		historyFile = new File("historyFile");
+		FileInputStream fi;
+		try {
+			fi = new FileInputStream(historyFile);
+
+		ObjectInputStream oi = new ObjectInputStream(fi);
+		Tuple<String, String> hist;
+		while((hist = (Tuple<String, String>)oi.readObject()) != null){
+			history.add(hist);
+		}
+		oi.close();
+		fi.close();
+		} catch (FileNotFoundException e) {
+			e.printStackTrace();
+		} catch (IOException e) {
+			e.printStackTrace();
+		} catch (ClassNotFoundException e) {
+			e.printStackTrace();
+		}
 	}
+	
+	void writeInFile(File file, Object obj){
+		try {
+			FileOutputStream f = new FileOutputStream(file);
+			ObjectOutputStream o = new ObjectOutputStream(f);
+			o.writeObject(o);
+			o.close();
+			f.close();
+		} catch (FileNotFoundException e) {
+			System.out.println("File not found");
+		} catch (IOException e) {
+			System.out.println("Error initializing stream");
+		}
+	}
+	
 	@Override
 	public void join(ClientInterface client) throws RemoteException {
 		if(!clientList.contains(client)){

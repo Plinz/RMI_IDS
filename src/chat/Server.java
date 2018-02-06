@@ -16,21 +16,26 @@ public class Server implements ServerInterface {
 	private List<Tuple<String, String>> history;
 	private File historyFile;
 	
+	@SuppressWarnings("unchecked")
 	public Server(){
 		clientList = new ArrayList<ClientInterface>();
 		history = new ArrayList<Tuple<String, String>>();
-		historyFile = new File("historyFile");
+
 		FileInputStream fi;
 		try {
-			fi = new FileInputStream(historyFile);
-
-		ObjectInputStream oi = new ObjectInputStream(fi);
-		Tuple<String, String> hist;
-		while((hist = (Tuple<String, String>)oi.readObject()) != null){
-			history.add(hist);
-		}
-		oi.close();
-		fi.close();
+			historyFile = new File("historyFile");
+			if(!historyFile.exists() && !historyFile.isDirectory()){
+				historyFile.createNewFile();
+			} else if (historyFile.length() != 0) {
+				fi = new FileInputStream(historyFile);
+				ObjectInputStream oi = new ObjectInputStream(fi);
+				Tuple<String, String> hist;
+				while((hist = ((Tuple<String, String>)oi.readObject())) != null){
+					history.add(hist);
+				}
+				oi.close();
+				fi.close();
+			}
 		} catch (FileNotFoundException e) {
 			e.printStackTrace();
 		} catch (IOException e) {

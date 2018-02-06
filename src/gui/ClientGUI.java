@@ -13,12 +13,17 @@ import chat.ClientInterface;
 import chat.ServerInterface;
 import chat.Tuple;
 import javafx.application.Application;
+import javafx.collections.ListChangeListener;
 import javafx.event.ActionEvent;
 import javafx.event.EventHandler;
 import javafx.geometry.Insets;
 import javafx.scene.Scene;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
+import javafx.scene.control.Menu;
+import javafx.scene.control.MenuBar;
+import javafx.scene.control.MenuItem;
+import javafx.scene.control.TableView;
 import javafx.scene.control.TextArea;
 import javafx.scene.control.TextField;
 import javafx.scene.input.KeyCode;
@@ -100,26 +105,52 @@ public class ClientGUI extends Application implements Observer{
     }
 	
     protected Scene Chat() {
-    	client.addObserver(this);
+    	client.addObserverPostMessage(this);
     	BorderPane root = new BorderPane();
 	    TextField chatMessage = new TextField();
-	    chatMessage.setPromptText("Enter Your Chat Message Here");
 	    chatRoom = new TextArea();
+	    try {
+			serverInterface.getHistory(c_stub);
+		} catch (RemoteException e2) {
+			e2.printStackTrace();
+		}
+	    chatMessage.setPromptText("Enter Your Chat Message Here");
 	    chatRoom.setPromptText("Welcome to the Chat room");
 	    chatRoom.setEditable(false);
 	    chatMessage.setOnKeyPressed(e -> {
 	    	 if(e.getCode() == KeyCode.ENTER) {
 	    		 try {
-	    			 String msg = chatMessage.getText().trim();
+	    			 String msg = chatMessage.getText();
 	    			 serverInterface.sendMessage(c_stub, msg);
-	    			 chatRoom.appendText(client.getName()+">>"+msg+'\n');
+	    			 chatRoom.appendText("<"+client.getName()+">"+msg+'\n');
 	    			 chatMessage.clear();
 	    		 } catch (RemoteException e1) {
 	    			 e1.printStackTrace();
 	    		 }
 	    	 }
 	    });
+	    
+	    TableView<String> usersList = new TableView<String>(client.getUsersList());
+	    client.listUsers();
+	    
+	    MenuBar menuBar = new MenuBar();
+        Menu menuOption = new Menu("Option");
+        MenuItem itemLeave = new MenuItem("Leave");
+        menuOption.getItems().add(itemLeave);
+        itemLeave.setOnAction(e -> {
+        	System.out.println("FireAction");
+        	try {
+				serverInterface.leave(c_stub);
+			} catch (RemoteException e1) {
+				e1.printStackTrace();
+			}
+        	stage.setScene(logInScene());
+        });
+        menuBar.getMenus().add(menuOption);
+	    
         root.setCenter(chatRoom);
+        root.setTop(menuBar);
+        root.setRight(usersList);
         root.setBottom(chatMessage);
         return new Scene(root);
     }
@@ -128,7 +159,7 @@ public class ClientGUI extends Application implements Observer{
 	@Override
 	public void update(Observable o, Object arg) {
 		Tuple<String, String> msg = (Tuple<String, String>) arg;
-		chatRoom.appendText(msg.x+">>"+msg.y+'\n');	
+		chatRoom.appendText("<"+msg.x+">"+msg.y+'\n');	
 	}
 
 }

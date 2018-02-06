@@ -63,10 +63,22 @@ public class Server implements ServerInterface {
 	public void join(ClientInterface client) throws RemoteException {
 		if(!clientList.contains(client)){
 			clientList.add(client);
-			client.postMessage("SERVER", "Vous êtes bien connecté ");
-			for(Tuple<String, String> t : history){
-				client.postMessage(t.x, t.y);
-			}
+			history.forEach(t -> {
+				try {
+					client.postMessage(t.x, t.y);
+				} catch (RemoteException e) {
+					e.printStackTrace();
+				}
+			});
+			clientList.forEach(c -> {
+				try {
+					client.userJoin(c.getName());
+					c.userJoin(client.getName());
+					c.postMessage("SERVER", client.getName()+" entre dans la room");
+				} catch (RemoteException e) {
+					e.printStackTrace();
+				}
+			});
 			System.out.println("Join Client : "+client.getName());
 		} else {
 			client.postMessage("SERVER", "Vous êtes déjà connecté ");
@@ -76,9 +88,17 @@ public class Server implements ServerInterface {
 	@Override
 	public void leave(ClientInterface client) throws RemoteException {
 		if(clientList.contains(client)){
+			String name = client.getName();
 			clientList.remove(client);
-			client.postMessage("SERVER", "Vous êtes bien déconnecté");
-			System.out.println("Leave Client : "+client.getName());
+			clientList.forEach(c -> {
+				try {
+					c.userLeave(name);
+					c.postMessage("SERVER", name+" a quitté dans la room");
+				} catch (RemoteException e) {
+					e.printStackTrace();
+				}
+			});
+			System.out.println("Leave Client : "+name);
 		} else {
 			client.postMessage("SERVER", "Vous êtes déjà déconnecté");
 		}
@@ -103,4 +123,5 @@ public class Server implements ServerInterface {
 			client.postMessage(t.x, t.y);
 		}	
 	}
+
 }

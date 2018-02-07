@@ -73,7 +73,8 @@ public class Server implements ServerInterface {
 			clientList.forEach(c -> {
 				try {
 					client.userJoin(c.getName());
-					c.userJoin(client.getName());
+					if (!client.getName().equals(c.getName()))
+						c.userJoin(client.getName());
 					c.postMessage("SERVER", client.getName()+" entre dans la room");
 				} catch (RemoteException e) {
 					e.printStackTrace();

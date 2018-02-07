@@ -54,11 +54,5 @@ public class Client implements ClientInterface{
 	public void userLeave(String name) throws RemoteException {
 		usersList.remove(name);
 	}
-
-	public void listUsers() {
-		usersList.forEach(c -> {
-			System.out.println(c);
-		});
-	}
 	
 }

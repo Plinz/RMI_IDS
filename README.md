@@ -15,7 +15,7 @@
 ## Utilisation
 
 Compilez les sources avec Java 8
-Dans le dossier bin, lancez :
+dans le dossier bin, lancez :
 
 
 	rmiregister

@@ -11,7 +11,7 @@ import javafx.collections.ObservableList;
 
 public class Client implements ClientInterface{
 	
-	private String name;
+	public String name;
 	private ObservableList<String> usersList;
 	private transient Observable observable = new Observable();
 	private transient Set<Observer> observers = new HashSet<>();

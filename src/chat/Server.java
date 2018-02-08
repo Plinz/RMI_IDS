@@ -63,6 +63,15 @@ public class Server implements ServerInterface {
 	public void join(ClientInterface client) throws RemoteException {
 		if(!clientList.contains(client)){
 			clientList.add(client);
+			clientList.forEach(c -> {
+				try {
+					client.userJoin(c.getName());
+					if (!client.getName().equals(c.getName()))
+						c.userJoin(client.getName());
+				} catch (RemoteException e) {
+					e.printStackTrace();
+				}
+			});
 			history.forEach(t -> {
 				try {
 					client.postMessage(t.x, t.y);
@@ -70,19 +79,7 @@ public class Server implements ServerInterface {
 					e.printStackTrace();
 				}
 			});
-			clientList.forEach(c -> {
-				try {
-					client.userJoin(c.getName());
-					if (!client.getName().equals(c.getName()))
-						c.userJoin(client.getName());
-					c.postMessage("SERVER", client.getName()+" entre dans la room");
-				} catch (RemoteException e) {
-					e.printStackTrace();
-				}
-			});
 			System.out.println("Join Client : "+client.getName());
-		} else {
-			client.postMessage("SERVER", "Vous êtes déjà connecté ");
 		}
 	}
 
@@ -94,14 +91,11 @@ public class Server implements ServerInterface {
 			clientList.forEach(c -> {
 				try {
 					c.userLeave(name);
-					c.postMessage("SERVER", name+" a quitté dans la room");
 				} catch (RemoteException e) {
 					e.printStackTrace();
 				}
 			});
 			System.out.println("Leave Client : "+name);
-		} else {
-			client.postMessage("SERVER", "Vous êtes déjà déconnecté");
 		}
 	}
 

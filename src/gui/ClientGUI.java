@@ -243,27 +243,26 @@ public class ClientGUI extends Application implements Observer{
 	    @Override 
 	    protected void updateItem(String userName, boolean empty) {
 	        super.updateItem(userName, empty);
-	        if (userName != null){
-	        	Platform.runLater(new Runnable() {
-					@Override
-					public void run() {
-						if (empty || userName == null || userName.equals("")){
-							setText(null);
-						} else {
-					        setText(userName);
-					        if (usersList.stream().noneMatch(t -> t.x.equals(userName))){
-					        	Color c;
-					        	c = colors.get((new Random()).nextInt(colors.size()));
-					        	colors.remove(c);
-					        	usersList.add(new Tuple<String, Color>(userName, c));
-					        }
-					        usersList.removeIf(t -> !client.getUsersList().contains(t.x));
-					        setTextFill(usersList.stream().filter(t -> t.x.equals(userName)).findFirst().get().y);
-					        //setBackground(new Background(new BackgroundFill(usersList.stream().filter(t -> t.x.equals(userName)).findFirst().get().y, null, null)));
-						}
+        	Platform.runLater(new Runnable() {
+				@Override
+				public void run() {
+					if (empty || userName == null || userName.equals("")){
+						setGraphic(null);
+						setText(null);
+					} else {
+				        setText(userName);
+				        if (usersList.stream().noneMatch(t -> t.x.equals(userName))){
+				        	Color c;
+				        	c = colors.get((new Random()).nextInt(colors.size()));
+				        	colors.remove(c);
+				        	usersList.add(new Tuple<String, Color>(userName, c));
+				        }
+				        usersList.removeIf(t -> !client.getUsersList().contains(t.x));
+				        setTextFill(usersList.stream().filter(t -> t.x.equals(userName)).findFirst().get().y);
+				        //setBackground(new Background(new BackgroundFill(usersList.stream().filter(t -> t.x.equals(userName)).findFirst().get().y, null, null)));
 					}
-				});
-	        }
+				}
+			});
 	    }
 	}
 

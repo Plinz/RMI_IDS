@@ -29,6 +29,7 @@ import javafx.scene.control.ListView;
 import javafx.scene.control.Menu;
 import javafx.scene.control.MenuBar;
 import javafx.scene.control.MenuItem;
+import javafx.scene.control.ScrollPane;
 import javafx.scene.control.TextField;
 import javafx.scene.input.KeyCode;
 import javafx.scene.input.MouseEvent;
@@ -81,7 +82,7 @@ public class ClientGUI extends Application implements Observer{
 		        for (int i = 0; i < field.length; i++) {
 		            Field f = field[i];                
 		            Object obj = f.get(null);
-		            if(obj instanceof Color){
+		            if(obj instanceof Color && ((Color) obj).isOpaque()){
 		                colors.add(((Color) obj));
 		            }
 	
@@ -129,8 +130,11 @@ public class ClientGUI extends Application implements Observer{
 	    			serverInterface = (ServerInterface) registry.lookup("ServerInterface");
 	    			client = new Client(nameTF.getText().trim());
 	    			c_stub = (ClientInterface) UnicastRemoteObject.exportObject(client, 0);
-	    			serverInterface.join(c_stub);
-	    			stage.setScene(Chat());
+	    			if (serverInterface.join(c_stub)){
+	    				stage.setScene(Chat());
+	    			} else {
+	    				nameTF.setText("ERROR");
+	    			}
 	            } catch (RemoteException e) {
 					e.printStackTrace();
 				} catch (NotBoundException e) {
@@ -147,6 +151,7 @@ public class ClientGUI extends Application implements Observer{
     protected Scene Chat() {
     	client.addObserverPostMessage(this);
     	BorderPane root = new BorderPane();
+    	ScrollPane scrollPaneChat = new ScrollPane();
 	    TextField chatMessage = new TextField();
 	    chatRoom = new TextFlow();
 
@@ -158,7 +163,9 @@ public class ClientGUI extends Application implements Observer{
 	    			 String msg = chatMessage.getText();
 	    			 serverInterface.sendMessage(c_stub, msg);
 	    			 Text nameText = new Text();
-	    			 nameText.setFill(usersList.stream().filter(t -> t.x.equals(client.name)).findFirst().get().y);
+	    			 if(usersList.stream().anyMatch(t -> t.x.equals(client.name))){
+	    				 nameText.setFill(usersList.stream().filter(t -> t.x.equals(client.name)).findFirst().get().y);
+	    			 }
 	    			 nameText.setText(client.getName());
 	    			 chatRoom.getChildren().addAll(new Text("<"), nameText, new Text(">"+msg+'\n'));
 	    			 chatMessage.clear();
@@ -210,7 +217,9 @@ public class ClientGUI extends Application implements Observer{
         });
         menuBar.getMenus().add(menuOption);
 	    
-        root.setCenter(chatRoom);
+        scrollPaneChat.setContent(chatRoom);
+        scrollPaneChat.setFitToWidth(true);
+        root.setCenter(scrollPaneChat);
         root.setTop(menuBar);
         root.setRight(usersListView);
         root.setBottom(chatMessage);
@@ -232,9 +241,19 @@ public class ClientGUI extends Application implements Observer{
 			public void run() {
 				Tuple<String, String> msg = (Tuple<String, String>) arg;
 				Text nameText = new Text();
-				nameText.setFill(usersList.stream().filter(t -> t.x.equals(msg.x)).findFirst().get().y);
-				nameText.setText(msg.x);
-				chatRoom.getChildren().addAll(new Text("<"), nameText, new Text(">"+msg.y+'\n'));
+				System.out.println("<"+msg.x+">"+msg.y);
+				if (msg.x.equals("SERVER")){
+					nameText.setFill(Color.RED);
+					nameText.setText(msg.y+'\n');
+					chatRoom.getChildren().addAll(nameText);
+				}
+				else{
+					if(usersList.stream().anyMatch(t -> t.x.equals(msg.x))){
+						nameText.setFill(usersList.stream().filter(t -> t.x.equals(msg.x)).findFirst().get().y);
+					}
+					nameText.setText(msg.x);
+					chatRoom.getChildren().addAll(new Text("<"), nameText, new Text(">"+msg.y+'\n'));
+				}
 			}
 		});
 	}

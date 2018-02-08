@@ -12,7 +12,6 @@ public class ServerMain {
 
 		    Registry registry= LocateRegistry.getRegistry(); 
 		    registry.bind("ServerInterface", s_stub);
-
 		    System.out.println ("Server ready");
 
 		  } catch (Exception e) {

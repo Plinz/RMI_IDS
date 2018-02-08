@@ -6,9 +6,11 @@
 - Récupération de l'historique des messages à la connexion
 - Sauvegarde de l'historique des messages dans un fichier par le serveur
 - Restoration des messages après panne
-- Interface graphique du client
-- Coloration des noms des utilisateurs
+- Interface graphique du client pour afficher les messages envoyés par les utilisateurs connectés
+- Coloration des noms des utilisateurs discutant sur le chat
 - Visualisation de la liste des utilisateurs connectés au chat
+- Déconnexion d'un utilisateur du chat
+- Les noms d'utilisateurs du chat sont uniques
 
 ## Utilisation
 

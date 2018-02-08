@@ -219,6 +219,7 @@ public class ClientGUI extends Application implements Observer{
 	    
         scrollPaneChat.setContent(chatRoom);
         scrollPaneChat.setFitToWidth(true);
+        scrollPaneChat.setVvalue(1);
         root.setCenter(scrollPaneChat);
         root.setTop(menuBar);
         root.setRight(usersListView);

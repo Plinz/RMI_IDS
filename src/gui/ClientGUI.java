@@ -8,6 +8,7 @@ import java.rmi.server.UnicastRemoteObject;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.ListIterator;
 import java.util.Observable;
 import java.util.Observer;
 import java.util.Random;
@@ -21,6 +22,7 @@ import javafx.application.Platform;
 import javafx.event.ActionEvent;
 import javafx.event.EventHandler;
 import javafx.geometry.Insets;
+import javafx.scene.Node;
 import javafx.scene.Scene;
 import javafx.scene.control.Button;
 import javafx.scene.control.ContextMenu;
@@ -73,7 +75,7 @@ public class ClientGUI extends Application implements Observer{
     @Override
     public void start(Stage primaryStage) throws Exception {
     	
-    	colors = new ArrayList<Color>(Arrays.asList(Color.AQUA, Color.BLACK, Color.BLUE, Color.BLUEVIOLET, Color.BROWN, Color.BURLYWOOD, Color.CADETBLUE, Color.CHARTREUSE,
+    	colors = new ArrayList<Color>(Arrays.asList(Color.AQUA, Color.BLUE, Color.BLUEVIOLET, Color.BROWN, Color.BURLYWOOD, Color.CADETBLUE, Color.CHARTREUSE,
     			Color.CHOCOLATE, Color.CORAL, Color.CORNFLOWERBLUE, Color.CYAN, Color.DARKBLUE, Color.DARKCYAN, Color.DARKGOLDENROD, Color.DARKGREEN, 
     			Color.DARKGREY, Color.DARKKHAKI, Color.DARKMAGENTA, Color.DARKOLIVEGREEN, Color.DARKORANGE, Color.DARKORCHID, Color.DARKRED, Color.DARKSEAGREEN, 
     			Color.DARKSLATEBLUE, Color.DARKSLATEGREY, Color.DARKTURQUOISE, Color.DARKVIOLET, Color.DEEPPINK, Color.DEEPSKYBLUE, Color.DIMGREY, Color.DODGERBLUE,
@@ -112,7 +114,7 @@ public class ClientGUI extends Application implements Observer{
 	        @Override
 	        public void handle(ActionEvent event) {
 	            try {
-					registry = LocateRegistry.getRegistry(serverAdressTF.getText().trim());
+					registry = LocateRegistry.getRegistry(serverAdressTF.getText().trim(), 2020);
 	    			serverInterface = (ServerInterface) registry.lookup("ServerInterface");
 	    			client = new Client(nameTF.getText().trim());
 	    			c_stub = (ClientInterface) UnicastRemoteObject.exportObject(client, 0);
@@ -271,6 +273,15 @@ public class ClientGUI extends Application implements Observer{
 				        	c = colors.get((new Random()).nextInt(colors.size()));
 				        	colors.remove(c);
 				        	usersList.add(new Tuple<String, Color>(userName, c));
+					        ListIterator<Node> it = chatRoom.getChildren().listIterator(chatRoom.getChildren().size());
+					        Text n;
+					        while(it.hasPrevious() && !((n = (Text) it.previous()).getText().equals(userName+" rentre dans le chat\n") && n.getFill().equals(Color.RED))){
+					        	System.out.println(n.getText());
+					        	if(n.getText().equals(userName)){
+					        		n.setFill(c);
+					        		it.set(n);
+					        	}
+					        }
 				        }
 				        usersList.removeIf(t -> !client.getUsersList().contains(t.x));
 				        setTextFill(usersList.stream().filter(t -> t.x.equals(userName)).findFirst().get().y);
@@ -289,6 +300,14 @@ public class ClientGUI extends Application implements Observer{
                 colors.add(oldColor);
                 tuple.y = newColor;
 		        setTextFill(newColor);
+		        ListIterator<Node> it = chatRoom.getChildren().listIterator(chatRoom.getChildren().size());
+		        Text n;
+		        while(it.hasPrevious() && !((n = (Text) it.previous()).getText().equals(getText()+" rentre dans le chat\n") && n.getFill().equals(Color.RED))){
+		        	if(n.getText().equals(getText()) && !n.getFill().equals(Color.BLACK)){
+		        		n.setFill(newColor);
+		        		it.set(n);
+		        	}
+		        }
             });
             contextMenu.getItems().addAll(editColor);
             emptyProperty().addListener((obs, wasEmpty, isNowEmpty) -> {

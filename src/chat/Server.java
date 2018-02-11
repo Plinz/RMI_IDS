@@ -165,4 +165,16 @@ public class Server implements ServerInterface {
 		}	
 	}
 
+	@Override
+	public void sendPrivateMessage(ClientInterface client, String nameTo, String message) throws RemoteException {
+		if (clientList.contains(client)){
+			System.out.println("Nouveau Message privé de " + client.getName() + ">" + message + " pour "+ nameTo);
+			String name = client.getName();
+			for(ClientInterface c : clientList){
+				if(c.getName().equals(nameTo))
+					c.postMessage(name, "[Privé]"+message);
+			}
+		}
+	}
+
 }

@@ -1,12 +1,12 @@
 package gui;
 
-import java.lang.reflect.Field;
 import java.rmi.NotBoundException;
 import java.rmi.RemoteException;
 import java.rmi.registry.LocateRegistry;
 import java.rmi.registry.Registry;
 import java.rmi.server.UnicastRemoteObject;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Observable;
 import java.util.Observer;
@@ -73,29 +73,15 @@ public class ClientGUI extends Application implements Observer{
     @Override
     public void start(Stage primaryStage) throws Exception {
     	
-    	colors = new ArrayList<Color>();
-	    Class<?> clazz;
-		try {
-			clazz = Class.forName("javafx.scene.paint.Color");
-		    if (clazz != null) {
-		        Field[] field = clazz.getFields();
-		        for (int i = 0; i < field.length; i++) {
-		            Field f = field[i];                
-		            Object obj = f.get(null);
-		            if(obj instanceof Color && ((Color) obj).isOpaque()){
-		                colors.add(((Color) obj));
-		            }
-	
-		        }
-		    }
-		} catch (ClassNotFoundException e) {
-			e.printStackTrace();
-		} catch (IllegalArgumentException e) {
-			e.printStackTrace();
-		} catch (IllegalAccessException e) {
-			e.printStackTrace();
-		}
-		colors.remove(Color.RED.toString());
+    	colors = Arrays.asList(Color.AQUA, Color.BLACK, Color.BLUE, Color.BLUEVIOLET, Color.BROWN, Color.BURLYWOOD, Color.CADETBLUE, Color.CHARTREUSE,
+    			Color.CHOCOLATE, Color.CORAL, Color.CORNFLOWERBLUE, Color.CYAN, Color.DARKBLUE, Color.DARKCYAN, Color.DARKGOLDENROD, Color.DARKGREEN, 
+    			Color.DARKGREY, Color.DARKKHAKI, Color.DARKMAGENTA, Color.DARKOLIVEGREEN, Color.DARKORANGE, Color.DARKORCHID, Color.DARKRED, Color.DARKSEAGREEN, 
+    			Color.DARKSLATEBLUE, Color.DARKSLATEGREY, Color.DARKTURQUOISE, Color.DARKVIOLET, Color.DEEPPINK, Color.DEEPSKYBLUE, Color.DIMGREY, Color.DODGERBLUE,
+    			Color.FIREBRICK, Color.FORESTGREEN, Color.FUCHSIA, Color.GOLD, Color.GOLDENROD, Color.GREEN, Color.GREENYELLOW, Color.GREY, Color.HOTPINK,
+    			Color.INDIANRED, Color.INDIGO, Color.LAWNGREEN, Color.LIME, Color.LIMEGREEN, Color.MAGENTA, Color.MAROON, Color.MEDIUMBLUE, Color.MIDNIGHTBLUE,
+    			Color.NAVY, Color.OLIVE, Color.OLIVEDRAB, Color.ORANGERED, Color.PERU, Color.PURPLE, Color.ROYALBLUE, Color.SADDLEBROWN, Color.SEAGREEN,
+    			Color.SIENNA, Color.SLATEBLUE, Color.SPRINGGREEN, Color.STEELBLUE, Color.TEAL, Color.TOMATO, Color.TURQUOISE, Color.YELLOWGREEN);
+
 		usersList = new ArrayList<Tuple<String, Color>>();
     	
         stage = primaryStage;
@@ -161,14 +147,32 @@ public class ClientGUI extends Application implements Observer{
 	    	 if(e.getCode() == KeyCode.ENTER) {
 	    		 try {
 	    			 String msg = chatMessage.getText();
-	    			 serverInterface.sendMessage(c_stub, msg);
-	    			 Text nameText = new Text();
-	    			 if(usersList.stream().anyMatch(t -> t.x.equals(client.name))){
-	    				 nameText.setFill(usersList.stream().filter(t -> t.x.equals(client.name)).findFirst().get().y);
+	    			 String[] tokens = msg.split(" ");
+	    			 if (tokens[0].equals("/msg")){
+	    				 if (usersList.stream().anyMatch(t -> t.x.equals(tokens[1]))){
+	    					 String privateMsg = String.join(" ", Arrays.copyOfRange(tokens, 2, tokens.length));
+	    					 serverInterface.sendPrivateMessage(c_stub, tokens[1], privateMsg);
+	    					 Text nameText = new Text();
+			    			 if(usersList.stream().anyMatch(t -> t.x.equals(client.name))){
+			    				 nameText.setFill(usersList.stream().filter(t -> t.x.equals(client.name)).findFirst().get().y);
+			    			 }
+			    			 nameText.setText(client.getName());
+			    			 chatRoom.getChildren().addAll(new Text("<"), nameText, new Text("[Privé à "+ tokens[1] + "]>" + privateMsg +'\n'));
+	    					 chatMessage.clear();
+	    				 } else {
+	    					 chatMessage.clear();
+	    					 chatMessage.setPromptText("Erreur : "+ tokens[1] + "n'est pas un nom d'utilisateur valide");;
+	    				 }
+	    			 } else {
+		    			 serverInterface.sendMessage(c_stub, msg);
+		    			 Text nameText = new Text();
+		    			 if(usersList.stream().anyMatch(t -> t.x.equals(client.name))){
+		    				 nameText.setFill(usersList.stream().filter(t -> t.x.equals(client.name)).findFirst().get().y);
+		    			 }
+		    			 nameText.setText(client.getName());
+		    			 chatRoom.getChildren().addAll(new Text("<"), nameText, new Text(">"+msg+'\n'));
+		    			 chatMessage.clear();
 	    			 }
-	    			 nameText.setText(client.getName());
-	    			 chatRoom.getChildren().addAll(new Text("<"), nameText, new Text(">"+msg+'\n'));
-	    			 chatMessage.clear();
 	    		 } catch (RemoteException e1) {
 	    			 e1.printStackTrace();
 	    		 }

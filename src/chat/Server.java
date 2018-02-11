@@ -83,6 +83,16 @@ public class Server implements ServerInterface {
 			}
 		}
 		if(joined && !clientList.contains(client) && !client.getName().equals("SERVER") && !client.getName().equals("ERROR")){
+			Tuple<String, String> tuple = new Tuple<String, String>("SERVER", client.getName()+" rentre dans le chat");
+			writeInFile(historyFile, tuple);
+			history.add(tuple);
+			clientList.forEach(c -> {
+				try {
+					c.postMessage("SERVER", client.getName()+" rentre dans le chat");
+				} catch (RemoteException e1) {
+					e1.printStackTrace();
+				}
+			});
 			clientList.add(client);
 			history.forEach(t -> {
 				try {
@@ -94,7 +104,6 @@ public class Server implements ServerInterface {
 			clientList.forEach(c -> {
 				try {
 					client.userJoin(c.getName());
-					c.postMessage("SERVER", client.getName()+" rentre dans le chat");
 					if (!client.getName().equals(c.getName()))
 						c.userJoin(client.getName());
 				} catch (RemoteException e) {
@@ -111,11 +120,20 @@ public class Server implements ServerInterface {
 	@Override
 	public void leave(ClientInterface client) throws RemoteException {
 		if(clientList.contains(client)){
+			Tuple<String, String> tuple = new Tuple<String, String>("SERVER", client.getName()+" quitte le chat");
+			writeInFile(historyFile, tuple);
+			history.add(tuple);
+			clientList.forEach(c -> {
+				try {
+					c.postMessage("SERVER", client.getName()+" quitte le chat");
+				} catch (RemoteException e1) {
+					e1.printStackTrace();
+				}
+			});
 			String name = client.getName();
 			clientList.remove(client);
 			clientList.forEach(c -> {
 				try {
-					c.postMessage("SERVER", client.getName()+" quitte dans le chat");
 					c.userLeave(name);
 				} catch (RemoteException e) {
 					e.printStackTrace();

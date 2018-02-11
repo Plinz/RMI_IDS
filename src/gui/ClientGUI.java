@@ -109,7 +109,10 @@ public class ClientGUI extends Application implements Observer{
 	    nameTF = new TextField();
 	    nameTF.setPromptText("User Name");
 	    nameTF.setEditable(true);	
-        
+        root.setOnKeyPressed(e -> {
+        	if(e.getCode() == KeyCode.ENTER)
+        		connexion.fire();
+        });
         connexion.setOnAction(new EventHandler<ActionEvent>() {
 	        @Override
 	        public void handle(ActionEvent event) {
@@ -123,15 +126,14 @@ public class ClientGUI extends Application implements Observer{
 	    			} else {
 	    				nameTF.setText("ERROR");
 	    			}
-	            } catch (RemoteException e) {
+	            } catch (RemoteException | NotBoundException e) {
 					e.printStackTrace();
-				} catch (NotBoundException e) {
-					e.printStackTrace();
-				} 
+				}
 	        }
 	    });
         root.setCenter(new VBox(30, new HBox(10, serverAdressL, serverAdressTF), new HBox(10, nameL, nameTF), connexion));
         root.setPadding(new Insets(60));
+        
         
         return new Scene(root);
     }
@@ -164,7 +166,8 @@ public class ClientGUI extends Application implements Observer{
 	    					 scrollPaneChat.setVvalue(1);
 	    				 } else {
 	    					 chatMessage.clear();
-	    					 chatMessage.setPromptText("Erreur : "+ tokens[1] + "n'est pas un nom d'utilisateur valide");;
+	    					 chatRoom.requestFocus();
+	    					 chatMessage.setPromptText("Erreur : "+ tokens[1] + " n'est pas un nom d'utilisateur valide");;
 	    				 }
 	    			 } else {
 		    			 serverInterface.sendMessage(c_stub, msg);
@@ -222,8 +225,8 @@ public class ClientGUI extends Application implements Observer{
         
         try {
 			serverInterface.getHistory(c_stub);
-		} catch (RemoteException e1) {
-			e1.printStackTrace();
+		} catch (RemoteException e) {
+			e.printStackTrace();
 		}
         
         return new Scene(root);

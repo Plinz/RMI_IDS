@@ -23,11 +23,10 @@ import javafx.event.EventHandler;
 import javafx.geometry.Insets;
 import javafx.scene.Scene;
 import javafx.scene.control.Button;
+import javafx.scene.control.ContextMenu;
 import javafx.scene.control.Label;
 import javafx.scene.control.ListCell;
 import javafx.scene.control.ListView;
-import javafx.scene.control.Menu;
-import javafx.scene.control.MenuBar;
 import javafx.scene.control.MenuItem;
 import javafx.scene.control.ScrollPane;
 import javafx.scene.control.TextField;
@@ -62,6 +61,7 @@ public class ClientGUI extends Application implements Observer{
 	private Button connexion;
 	
 	private TextFlow chatRoom;
+	private ScrollPane scrollPaneChat;
 	
 	
 	public static void main(String[] args) {
@@ -73,14 +73,14 @@ public class ClientGUI extends Application implements Observer{
     @Override
     public void start(Stage primaryStage) throws Exception {
     	
-    	colors = Arrays.asList(Color.AQUA, Color.BLACK, Color.BLUE, Color.BLUEVIOLET, Color.BROWN, Color.BURLYWOOD, Color.CADETBLUE, Color.CHARTREUSE,
+    	colors = new ArrayList<Color>(Arrays.asList(Color.AQUA, Color.BLACK, Color.BLUE, Color.BLUEVIOLET, Color.BROWN, Color.BURLYWOOD, Color.CADETBLUE, Color.CHARTREUSE,
     			Color.CHOCOLATE, Color.CORAL, Color.CORNFLOWERBLUE, Color.CYAN, Color.DARKBLUE, Color.DARKCYAN, Color.DARKGOLDENROD, Color.DARKGREEN, 
     			Color.DARKGREY, Color.DARKKHAKI, Color.DARKMAGENTA, Color.DARKOLIVEGREEN, Color.DARKORANGE, Color.DARKORCHID, Color.DARKRED, Color.DARKSEAGREEN, 
     			Color.DARKSLATEBLUE, Color.DARKSLATEGREY, Color.DARKTURQUOISE, Color.DARKVIOLET, Color.DEEPPINK, Color.DEEPSKYBLUE, Color.DIMGREY, Color.DODGERBLUE,
     			Color.FIREBRICK, Color.FORESTGREEN, Color.FUCHSIA, Color.GOLD, Color.GOLDENROD, Color.GREEN, Color.GREENYELLOW, Color.GREY, Color.HOTPINK,
     			Color.INDIANRED, Color.INDIGO, Color.LAWNGREEN, Color.LIME, Color.LIMEGREEN, Color.MAGENTA, Color.MAROON, Color.MEDIUMBLUE, Color.MIDNIGHTBLUE,
     			Color.NAVY, Color.OLIVE, Color.OLIVEDRAB, Color.ORANGERED, Color.PERU, Color.PURPLE, Color.ROYALBLUE, Color.SADDLEBROWN, Color.SEAGREEN,
-    			Color.SIENNA, Color.SLATEBLUE, Color.SPRINGGREEN, Color.STEELBLUE, Color.TEAL, Color.TOMATO, Color.TURQUOISE, Color.YELLOWGREEN);
+    			Color.SIENNA, Color.SLATEBLUE, Color.SPRINGGREEN, Color.STEELBLUE, Color.TEAL, Color.TOMATO, Color.TURQUOISE, Color.YELLOWGREEN));
 
 		usersList = new ArrayList<Tuple<String, Color>>();
     	
@@ -137,7 +137,7 @@ public class ClientGUI extends Application implements Observer{
     protected Scene Chat() {
     	client.addObserverPostMessage(this);
     	BorderPane root = new BorderPane();
-    	ScrollPane scrollPaneChat = new ScrollPane();
+    	scrollPaneChat = new ScrollPane();
 	    TextField chatMessage = new TextField();
 	    chatRoom = new TextFlow();
 
@@ -159,6 +159,7 @@ public class ClientGUI extends Application implements Observer{
 			    			 nameText.setText(client.getName());
 			    			 chatRoom.getChildren().addAll(new Text("<"), nameText, new Text("[Privé à "+ tokens[1] + "]>" + privateMsg +'\n'));
 	    					 chatMessage.clear();
+	    					 scrollPaneChat.setVvalue(1);
 	    				 } else {
 	    					 chatMessage.clear();
 	    					 chatMessage.setPromptText("Erreur : "+ tokens[1] + "n'est pas un nom d'utilisateur valide");;
@@ -172,6 +173,7 @@ public class ClientGUI extends Application implements Observer{
 		    			 nameText.setText(client.getName());
 		    			 chatRoom.getChildren().addAll(new Text("<"), nameText, new Text(">"+msg+'\n'));
 		    			 chatMessage.clear();
+		    			 scrollPaneChat.setVvalue(1);
 	    			 }
 	    		 } catch (RemoteException e1) {
 	    			 e1.printStackTrace();
@@ -181,9 +183,10 @@ public class ClientGUI extends Application implements Observer{
 	    
 	    usersListView = new ListView<String>();
 	    usersListView.setItems(client.getUsersList());
+	    usersListView.setCellFactory(lv -> new UserNameCell());
 	    usersListView.setCellFactory(new Callback<ListView<String>, ListCell<String>>() {
 			@Override
-			public ListCell<String> call(ListView<String> list) {
+			public ListCell<String> call(ListView<String> list) {			
 				return new UserNameCell();
 			}
 		});
@@ -206,26 +209,12 @@ public class ClientGUI extends Application implements Observer{
 				System.exit(0);
 			}
 		});
-	    	    
-	    MenuBar menuBar = new MenuBar();
-        Menu menuOption = new Menu("Option");
-        MenuItem itemLeave = new MenuItem("Leave");
-        menuOption.getItems().add(itemLeave);
-        itemLeave.setOnAction(e -> {
-        	try {
-				serverInterface.leave(c_stub);
-			} catch (RemoteException e1) {
-				e1.printStackTrace();
-			}
-        	stage.setScene(logInScene());
-        });
-        menuBar.getMenus().add(menuOption);
-	    
+        
         scrollPaneChat.setContent(chatRoom);
         scrollPaneChat.setFitToWidth(true);
         scrollPaneChat.setVvalue(1);
         root.setCenter(scrollPaneChat);
-        root.setTop(menuBar);
+
         root.setRight(usersListView);
         root.setBottom(chatMessage);
         
@@ -246,7 +235,6 @@ public class ClientGUI extends Application implements Observer{
 			public void run() {
 				Tuple<String, String> msg = (Tuple<String, String>) arg;
 				Text nameText = new Text();
-				System.out.println("<"+msg.x+">"+msg.y);
 				if (msg.x.equals("SERVER")){
 					nameText.setFill(Color.RED);
 					nameText.setText(msg.y+'\n');
@@ -259,6 +247,7 @@ public class ClientGUI extends Application implements Observer{
 					nameText.setText(msg.x);
 					chatRoom.getChildren().addAll(new Text("<"), nameText, new Text(">"+msg.y+'\n'));
 				}
+				scrollPaneChat.setVvalue(1);
 			}
 		});
 	}
@@ -267,6 +256,7 @@ public class ClientGUI extends Application implements Observer{
 	    @Override 
 	    protected void updateItem(String userName, boolean empty) {
 	        super.updateItem(userName, empty);
+	        
         	Platform.runLater(new Runnable() {
 				@Override
 				public void run() {
@@ -275,6 +265,7 @@ public class ClientGUI extends Application implements Observer{
 						setText(null);
 					} else {
 				        setText(userName);
+				        setStyle("-fx-font-weight: bold;");
 				        if (usersList.stream().noneMatch(t -> t.x.equals(userName))){
 				        	Color c;
 				        	c = colors.get((new Random()).nextInt(colors.size()));
@@ -283,10 +274,30 @@ public class ClientGUI extends Application implements Observer{
 				        }
 				        usersList.removeIf(t -> !client.getUsersList().contains(t.x));
 				        setTextFill(usersList.stream().filter(t -> t.x.equals(userName)).findFirst().get().y);
-				        //setBackground(new Background(new BackgroundFill(usersList.stream().filter(t -> t.x.equals(userName)).findFirst().get().y, null, null)));
 					}
 				}
 			});
+        	
+			ContextMenu contextMenu = new ContextMenu();
+            MenuItem editColor = new MenuItem();
+            editColor.setText("Changez la couleur");
+            editColor.setOnAction(event -> {
+                Tuple<String, Color> tuple = usersList.stream().filter(t -> t.x.equals(getText())).findFirst().get();
+                Color oldColor = tuple.y;
+                Color newColor = colors.get((new Random()).nextInt(colors.size()));
+                colors.remove(newColor);
+                colors.add(oldColor);
+                tuple.y = newColor;
+		        setTextFill(newColor);
+            });
+            contextMenu.getItems().addAll(editColor);
+            emptyProperty().addListener((obs, wasEmpty, isNowEmpty) -> {
+                if (isNowEmpty) {
+                    setContextMenu(null);
+                } else {
+                    setContextMenu(contextMenu);
+                }
+            });
 	    }
 	}
 

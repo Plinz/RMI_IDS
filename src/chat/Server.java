@@ -17,7 +17,7 @@ public class Server implements ServerInterface {
 	private File historyFile;
 	private FileOutputStream fo;
 	private ObjectOutputStream oo;
-	
+
 	public Server(){
 		clientList = new ArrayList<ClientInterface>();
 		history = new ArrayList<Message>();
@@ -36,9 +36,9 @@ public class Server implements ServerInterface {
 				oi.close();
 				fi.close();
 				oo = new ObjectOutputStream(fo) {
-			        @Override
-			        protected void writeStreamHeader() throws IOException {
-			        }
+					@Override
+					protected void writeStreamHeader() throws IOException {
+					}
 				};
 			} else {
 				oo = new ObjectOutputStream(fo);
@@ -51,7 +51,7 @@ public class Server implements ServerInterface {
 			e.printStackTrace();
 		}
 	}
-	
+
 	void writeInFile(File file, Object obj){
 		try {
 			oo.writeObject(obj);
@@ -60,7 +60,7 @@ public class Server implements ServerInterface {
 			e.printStackTrace();
 		}
 	}
-	
+
 	@Override
 	public boolean join(ClientInterface client) throws RemoteException {
 		boolean joined = true;
@@ -69,7 +69,8 @@ public class Server implements ServerInterface {
 				joined = false;
 			}
 		}
-		if(joined && !clientList.contains(client) && !client.getName().equals("SERVER") && !client.getName().equals("ERROR")){
+		if(joined && !clientList.contains(client) && !client.getName().equals("SERVER") && 
+				!client.getName().equals("ERROR") && !client.getName().trim().isEmpty()){
 			Message serverMsg = new Message("SERVER", client.getName(), client.getName()+" rentre dans le chat", false);
 			writeInFile(historyFile, serverMsg);
 			history.add(serverMsg);
@@ -80,14 +81,8 @@ public class Server implements ServerInterface {
 					e1.printStackTrace();
 				}
 			});
+
 			clientList.add(client);
-			history.forEach(m -> {
-				try {
-					client.postMessage(m);
-				} catch (RemoteException e) {
-					e.printStackTrace();
-				}
-			});
 			clientList.forEach(c -> {
 				try {
 					client.userJoin(c.getName());
@@ -144,7 +139,7 @@ public class Server implements ServerInterface {
 			}
 		}
 	}
-	
+
 	@Override
 	public void getHistory(ClientInterface client) throws RemoteException {
 		for(Message m : history){

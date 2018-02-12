@@ -34,6 +34,7 @@ import javafx.scene.control.MenuItem;
 import javafx.scene.control.ScrollPane;
 import javafx.scene.control.TextField;
 import javafx.scene.input.KeyCode;
+import javafx.scene.input.KeyEvent;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.HBox;
@@ -42,8 +43,6 @@ import javafx.scene.paint.Color;
 import javafx.scene.text.Text;
 import javafx.scene.text.TextFlow;
 import javafx.stage.Stage;
-import javafx.stage.WindowEvent;
-import javafx.util.Callback;
 
 
 public class ClientGUI extends Application implements Observer{
@@ -63,6 +62,7 @@ public class ClientGUI extends Application implements Observer{
 
 	private Button connexion;
 
+	private TextField chatMessage;
 	private TextFlow chatRoom;
 	private ScrollPane scrollPaneChat;
 
@@ -143,75 +143,38 @@ public class ClientGUI extends Application implements Observer{
 		client.addObserverPostMessage(this);
 		BorderPane root = new BorderPane();
 		scrollPaneChat = new ScrollPane();
-		TextField chatMessage = new TextField();
+		chatMessage = new TextField();
 		chatRoom = new TextFlow();
 
 		chatMessage.setPromptText("Enter Your Chat Message Here");
 
-		chatMessage.setOnKeyPressed(e -> {
-			String msg = chatMessage.getText();
-			if(e.getCode() == KeyCode.ENTER && !msg.trim().isEmpty()) {
-				try {
-					String[] tokens = msg.split(" ");
-					if (tokens[0].equals("/msg")){
-						if (tokens.length > 2){
-							if (usersList.stream().anyMatch(t -> t.x.equals(tokens[1]))  && !tokens[1].equals(client.getName())){
-								String privateMsg = String.join(" ", Arrays.copyOfRange(tokens, 2, tokens.length));
-								serverInterface.sendMessage(c_stub, new Message(client.getName(), tokens[1], privateMsg, true));
-								chatMessage.clear();
-							} else {
-								chatMessage.clear();
-								chatRoom.requestFocus();
-								if (tokens[1].equals(client.getName()))
-									chatMessage.setPromptText("Erreur : Vous ne pouvez pas vous envoyer un message privé");
-								else
-									chatMessage.setPromptText("Erreur : "+ tokens[1] + " n'est pas un nom d'utilisateur valide");
-							}
-						}
-					} else {
-						serverInterface.sendMessage(c_stub, new Message(client.getName(), "all", msg, false));
-						chatMessage.clear();
-					}
-				} catch (RemoteException e1) {
-					e1.printStackTrace();
-				}
-			}
-		});
+		chatMessage.setOnKeyPressed(e -> computeLine(e));
 
 		usersListView = new ListView<String>();
 		usersListView.setItems(client.getUsersList());
 		usersListView.setCellFactory(lv -> new UserNameCell());
-		usersListView.setCellFactory(new Callback<ListView<String>, ListCell<String>>() {
-			@Override
-			public ListCell<String> call(ListView<String> list) {			
-				return new UserNameCell();
-			}
-		});
 		usersListView.addEventFilter(MouseEvent.MOUSE_PRESSED, new EventHandler<MouseEvent>() {
 			@Override
 			public void handle(MouseEvent event) {
 				event.consume();
 			}
 		});;
-
-		stage.setOnCloseRequest(new EventHandler<WindowEvent>() {
-			@Override
-			public void handle(WindowEvent event) {
-				try {
-					serverInterface.leave(c_stub);
-				} catch (RemoteException e) {
-					e.printStackTrace();
-				}
-				Platform.exit();
-				System.exit(0);
+		
+		stage.setOnCloseRequest(h -> {
+			try {
+				serverInterface.leave(c_stub);
+			} catch (RemoteException e) {
+				e.printStackTrace();
 			}
+			Platform.exit();
+			System.exit(0);
 		});
 
 		scrollPaneChat.setContent(chatRoom);
 		scrollPaneChat.setFitToWidth(true);
 		scrollPaneChat.setVvalue(1);
+		
 		root.setCenter(scrollPaneChat);
-
 		root.setRight(usersListView);
 		root.setBottom(chatMessage);
 
@@ -222,6 +185,36 @@ public class ClientGUI extends Application implements Observer{
 		}
 
 		return new Scene(root);
+	}
+
+	private void computeLine(KeyEvent e) {
+		String msg = chatMessage.getText();
+		if(e.getCode() == KeyCode.ENTER && !msg.trim().isEmpty()) {
+			try {
+				String[] tokens = msg.split(" ");
+				if (tokens[0].equals("/msg")){
+					if (tokens.length > 2){
+						if (usersList.stream().anyMatch(t -> t.x.equals(tokens[1]))  && !tokens[1].equals(client.getName())){
+							String privateMsg = String.join(" ", Arrays.copyOfRange(tokens, 2, tokens.length));
+							serverInterface.sendMessage(c_stub, new Message(client.getName(), tokens[1], privateMsg, true));
+							chatMessage.clear();
+						} else {
+							chatMessage.clear();
+							chatRoom.requestFocus();
+							if (tokens[1].equals(client.getName()))
+								chatMessage.setPromptText("Erreur : Vous ne pouvez pas vous envoyer un message privé");
+							else
+								chatMessage.setPromptText("Erreur : "+ tokens[1] + " n'est pas un nom d'utilisateur valide");
+						}
+					}
+				} else {
+					serverInterface.sendMessage(c_stub, new Message(client.getName(), "all", msg, false));
+					chatMessage.clear();
+				}
+			} catch (RemoteException e1) {
+				e1.printStackTrace();
+			}
+		}
 	}
 
 	@Override

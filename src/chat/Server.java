@@ -139,7 +139,7 @@ public class Server implements ServerInterface {
 				history.add(message);
 			}
 			for(ClientInterface c : clientList){
-				if((!c.getName().equals(message.getFrom()) && !message.isPrivate()) || (c.getName().equals(message.getTo()) && message.isPrivate()))
+				if(!message.isPrivate() || ((c.getName().equals(message.getTo()) || c.getName().equals(message.getFrom())) && message.isPrivate()))
 					c.postMessage(message);
 			}
 		}

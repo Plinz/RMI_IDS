@@ -41,8 +41,8 @@ public class Client implements ClientInterface{
 		return this.usersList;
 	}
 	@Override
-	public void postMessage(String name, String msg) throws RemoteException {
-		observers.stream().forEach(o -> o.update(observable, new Tuple<String, String>(name, msg)));
+	public void postMessage(Message message) throws RemoteException {
+		observers.stream().forEach(o -> o.update(observable, message));
 	}
 
 	@Override

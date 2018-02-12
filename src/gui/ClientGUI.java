@@ -15,6 +15,7 @@ import java.util.Random;
 
 import chat.Client;
 import chat.ClientInterface;
+import chat.Message;
 import chat.ServerInterface;
 import chat.Tuple;
 import javafx.application.Application;
@@ -81,7 +82,7 @@ public class ClientGUI extends Application implements Observer{
     			Color.DARKSLATEBLUE, Color.DARKSLATEGREY, Color.DARKTURQUOISE, Color.DARKVIOLET, Color.DEEPPINK, Color.DEEPSKYBLUE, Color.DIMGREY, Color.DODGERBLUE,
     			Color.FIREBRICK, Color.FORESTGREEN, Color.FUCHSIA, Color.GOLD, Color.GOLDENROD, Color.GREEN, Color.GREENYELLOW, Color.GREY, Color.HOTPINK,
     			Color.INDIANRED, Color.INDIGO, Color.LAWNGREEN, Color.LIME, Color.LIMEGREEN, Color.MAGENTA, Color.MAROON, Color.MEDIUMBLUE, Color.MIDNIGHTBLUE,
-    			Color.NAVY, Color.OLIVE, Color.OLIVEDRAB, Color.ORANGERED, Color.PERU, Color.PURPLE, Color.ROYALBLUE, Color.SADDLEBROWN, Color.SEAGREEN,
+    			Color.NAVY, Color.OLIVE, Color.OLIVEDRAB, Color.ORANGERED, Color.PERU, Color.ROYALBLUE, Color.SADDLEBROWN, Color.SEAGREEN,
     			Color.SIENNA, Color.SLATEBLUE, Color.SPRINGGREEN, Color.STEELBLUE, Color.TEAL, Color.TOMATO, Color.TURQUOISE, Color.YELLOWGREEN));
 
 		usersList = new ArrayList<Tuple<String, Color>>();
@@ -153,24 +154,29 @@ public class ClientGUI extends Application implements Observer{
 	    			 String msg = chatMessage.getText();
 	    			 String[] tokens = msg.split(" ");
 	    			 if (tokens[0].equals("/msg")){
-	    				 if (usersList.stream().anyMatch(t -> t.x.equals(tokens[1]))){
+	    				 if (usersList.stream().anyMatch(t -> t.x.equals(tokens[1]))  && !tokens[1].equals(client.getName())){
 	    					 String privateMsg = String.join(" ", Arrays.copyOfRange(tokens, 2, tokens.length));
-	    					 serverInterface.sendPrivateMessage(c_stub, tokens[1], privateMsg);
+	    					 serverInterface.sendMessage(c_stub, new Message(client.getName(), tokens[1], privateMsg, true));
 	    					 Text nameText = new Text();
 			    			 if(usersList.stream().anyMatch(t -> t.x.equals(client.name))){
 			    				 nameText.setFill(usersList.stream().filter(t -> t.x.equals(client.name)).findFirst().get().y);
 			    			 }
 			    			 nameText.setText(client.getName());
-			    			 chatRoom.getChildren().addAll(new Text("<"), nameText, new Text("[Privé à "+ tokens[1] + "]>" + privateMsg +'\n'));
+			    			 Text privateText = new Text(" [Privé à "+ tokens[1] + "] ");
+			    			 privateText.setFill(Color.PURPLE);
+			    			 chatRoom.getChildren().addAll(new Text("<"), nameText, privateText, new Text(">"+ privateMsg +'\n'));
 	    					 chatMessage.clear();
 	    					 scrollPaneChat.setVvalue(1);
 	    				 } else {
 	    					 chatMessage.clear();
 	    					 chatRoom.requestFocus();
-	    					 chatMessage.setPromptText("Erreur : "+ tokens[1] + " n'est pas un nom d'utilisateur valide");;
+	    					 if (tokens[1].equals(client.getName()))
+	    						 chatMessage.setPromptText("Erreur : Vous ne pouvez pas vous envoyer un message privé");
+	    					 else
+	    						 chatMessage.setPromptText("Erreur : "+ tokens[1] + " n'est pas un nom d'utilisateur valide");
 	    				 }
 	    			 } else {
-		    			 serverInterface.sendMessage(c_stub, msg);
+		    			 serverInterface.sendMessage(c_stub, new Message(client.getName(), "all", msg, false));
 		    			 Text nameText = new Text();
 		    			 if(usersList.stream().anyMatch(t -> t.x.equals(client.name))){
 		    				 nameText.setFill(usersList.stream().filter(t -> t.x.equals(client.name)).findFirst().get().y);
@@ -232,25 +238,29 @@ public class ClientGUI extends Application implements Observer{
         return new Scene(root);
     }
 
-	@SuppressWarnings("unchecked")
 	@Override
 	public void update(Observable o, Object arg) {
 		Platform.runLater(new Runnable() {
 			@Override
 			public void run() {
-				Tuple<String, String> msg = (Tuple<String, String>) arg;
+				Message message = (Message) arg;
 				Text nameText = new Text();
-				if (msg.x.equals("SERVER")){
+				if (message.getFrom().equals("SERVER")){
 					nameText.setFill(Color.RED);
-					nameText.setText(msg.y+'\n');
+					nameText.setText(message.getData()+'\n');
 					chatRoom.getChildren().addAll(nameText);
-				}
-				else{
-					if(usersList.stream().anyMatch(t -> t.x.equals(msg.x))){
-						nameText.setFill(usersList.stream().filter(t -> t.x.equals(msg.x)).findFirst().get().y);
+				} else{
+					if(usersList.stream().anyMatch(t -> t.x.equals(message.getFrom()))){
+						nameText.setFill(usersList.stream().filter(t -> t.x.equals(message.getFrom())).findFirst().get().y);
 					}
-					nameText.setText(msg.x);
-					chatRoom.getChildren().addAll(new Text("<"), nameText, new Text(">"+msg.y+'\n'));
+					nameText.setText(message.getFrom());
+					if(message.isPrivate()){
+						Text privateMessage = new Text(" [Privé] "); 
+						privateMessage.setFill(Color.PURPLE);
+						chatRoom.getChildren().addAll(new Text("<"), nameText, privateMessage, new Text(">" + message.getData() + '\n'));
+					} else {
+						chatRoom.getChildren().addAll(new Text("<"), nameText, new Text(">"+message.getData()+'\n'));
+					}
 				}
 				scrollPaneChat.setVvalue(1);
 			}

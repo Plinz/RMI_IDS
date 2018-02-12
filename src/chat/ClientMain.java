@@ -38,7 +38,7 @@ public class ClientMain {
 		        } else if (text.equalsIgnoreCase("quit")){
 		        	break;
 		        } else {
-		        	serverInterface.sendMessage(c_stub, text);
+		        	serverInterface.sendMessage(c_stub, new Message(client.getName(), "all", text, false));
 		        }
 			}
 			scanner.close();

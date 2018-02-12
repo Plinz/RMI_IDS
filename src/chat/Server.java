@@ -13,15 +13,14 @@ import java.util.List;
 
 public class Server implements ServerInterface {
 	private List<ClientInterface> clientList;
-	private List<Tuple<String, String>> history;
+	private List<Message> history;
 	private File historyFile;
 	private FileOutputStream fo;
 	private ObjectOutputStream oo;
 	
-	@SuppressWarnings("unchecked")
 	public Server(){
 		clientList = new ArrayList<ClientInterface>();
-		history = new ArrayList<Tuple<String, String>>();
+		history = new ArrayList<Message>();
 
 		FileInputStream fi;
 		try {
@@ -30,8 +29,8 @@ public class Server implements ServerInterface {
 			if (historyFile.length() != 0) {
 				fi = new FileInputStream(historyFile);
 				ObjectInputStream oi = new ObjectInputStream(fi);
-				Tuple<String, String> hist;
-				while(fi.available() > 0 && (hist = ((Tuple<String, String>)oi.readObject())) != null){
+				Message hist;
+				while(fi.available() > 0 && (hist = ((Message)oi.readObject())) != null){
 					history.add(hist);
 				}
 				oi.close();
@@ -60,18 +59,6 @@ public class Server implements ServerInterface {
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
-		
-//		try {			
-////			FileOutputStream f = new FileOutputStream(file, true);
-////			ObjectOutputStream o = new ObjectOutputStream(f);
-//			
-////			o.close();
-////			f.close();
-//		} catch (FileNotFoundException e) {
-//			System.out.println("File not found");
-//		} catch (IOException e) {
-//			System.out.println("Error initializing stream");
-//		}
 	}
 	
 	@Override
@@ -83,20 +70,20 @@ public class Server implements ServerInterface {
 			}
 		}
 		if(joined && !clientList.contains(client) && !client.getName().equals("SERVER") && !client.getName().equals("ERROR")){
-			Tuple<String, String> tuple = new Tuple<String, String>("SERVER", client.getName()+" rentre dans le chat");
-			writeInFile(historyFile, tuple);
-			history.add(tuple);
+			Message serverMsg = new Message("SERVER", client.getName(), client.getName()+" rentre dans le chat", false);
+			writeInFile(historyFile, serverMsg);
+			history.add(serverMsg);
 			clientList.forEach(c -> {
 				try {
-					c.postMessage("SERVER", client.getName()+" rentre dans le chat");
+					c.postMessage(serverMsg);
 				} catch (RemoteException e1) {
 					e1.printStackTrace();
 				}
 			});
 			clientList.add(client);
-			history.forEach(t -> {
+			history.forEach(m -> {
 				try {
-					client.postMessage(t.x, t.y);
+					client.postMessage(m);
 				} catch (RemoteException e) {
 					e.printStackTrace();
 				}
@@ -120,12 +107,12 @@ public class Server implements ServerInterface {
 	@Override
 	public void leave(ClientInterface client) throws RemoteException {
 		if(clientList.contains(client)){
-			Tuple<String, String> tuple = new Tuple<String, String>("SERVER", client.getName()+" quitte le chat");
-			writeInFile(historyFile, tuple);
-			history.add(tuple);
+			Message serverMsg = new Message("SERVER", client.getName(), client.getName()+" quitte le chat", false);
+			writeInFile(historyFile, serverMsg);
+			history.add(serverMsg);
 			clientList.forEach(c -> {
 				try {
-					c.postMessage("SERVER", client.getName()+" quitte le chat");
+					c.postMessage(serverMsg);
 				} catch (RemoteException e1) {
 					e1.printStackTrace();
 				}
@@ -144,37 +131,24 @@ public class Server implements ServerInterface {
 	}
 
 	@Override
-	public void sendMessage(ClientInterface client, String message) throws RemoteException {
+	public void sendMessage(ClientInterface client, Message message) throws RemoteException {
 		if (clientList.contains(client)){
-			System.out.println("Nouveau Message de "+client.getName()+">"+message);
-			String name = client.getName();
-			Tuple<String, String> tuple = new Tuple<String, String>(name, message);
-			writeInFile(historyFile, tuple);
-			history.add(tuple);
+			System.out.println("Nouveau Message " + message);
+			if(!message.isPrivate()){
+				writeInFile(historyFile, message);
+				history.add(message);
+			}
 			for(ClientInterface c : clientList){
-				if(!c.equals(client))
-					c.postMessage(name, message);
+				if((!c.getName().equals(message.getFrom()) && !message.isPrivate()) || (c.getName().equals(message.getTo()) && message.isPrivate()))
+					c.postMessage(message);
 			}
 		}
 	}
 	
 	@Override
 	public void getHistory(ClientInterface client) throws RemoteException {
-		for(Tuple<String, String> t : history){
-			client.postMessage(t.x, t.y);
+		for(Message m : history){
+			client.postMessage(m);
 		}	
 	}
-
-	@Override
-	public void sendPrivateMessage(ClientInterface client, String nameTo, String message) throws RemoteException {
-		if (clientList.contains(client)){
-			System.out.println("Nouveau Message privé de " + client.getName() + ">" + message + " pour "+ nameTo);
-			String name = client.getName();
-			for(ClientInterface c : clientList){
-				if(c.getName().equals(nameTo))
-					c.postMessage(name, "[Privé]"+message);
-			}
-		}
-	}
-
 }

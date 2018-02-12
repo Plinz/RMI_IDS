@@ -150,22 +150,23 @@ public class ClientGUI extends Application implements Observer{
 
 		chatMessage.setOnKeyPressed(e -> {
 			String msg = chatMessage.getText();
-			if(e.getCode() == KeyCode.ENTER && !msg.isEmpty()) {
+			if(e.getCode() == KeyCode.ENTER && !msg.trim().isEmpty()) {
 				try {
-
 					String[] tokens = msg.split(" ");
 					if (tokens[0].equals("/msg")){
-						if (usersList.stream().anyMatch(t -> t.x.equals(tokens[1]))  && !tokens[1].equals(client.getName())){
-							String privateMsg = String.join(" ", Arrays.copyOfRange(tokens, 2, tokens.length));
-							serverInterface.sendMessage(c_stub, new Message(client.getName(), tokens[1], privateMsg, true));
-							chatMessage.clear();
-						} else {
-							chatMessage.clear();
-							chatRoom.requestFocus();
-							if (tokens[1].equals(client.getName()))
-								chatMessage.setPromptText("Erreur : Vous ne pouvez pas vous envoyer un message privé");
-							else
-								chatMessage.setPromptText("Erreur : "+ tokens[1] + " n'est pas un nom d'utilisateur valide");
+						if (tokens.length > 2){
+							if (usersList.stream().anyMatch(t -> t.x.equals(tokens[1]))  && !tokens[1].equals(client.getName())){
+								String privateMsg = String.join(" ", Arrays.copyOfRange(tokens, 2, tokens.length));
+								serverInterface.sendMessage(c_stub, new Message(client.getName(), tokens[1], privateMsg, true));
+								chatMessage.clear();
+							} else {
+								chatMessage.clear();
+								chatRoom.requestFocus();
+								if (tokens[1].equals(client.getName()))
+									chatMessage.setPromptText("Erreur : Vous ne pouvez pas vous envoyer un message privé");
+								else
+									chatMessage.setPromptText("Erreur : "+ tokens[1] + " n'est pas un nom d'utilisateur valide");
+							}
 						}
 					} else {
 						serverInterface.sendMessage(c_stub, new Message(client.getName(), "all", msg, false));

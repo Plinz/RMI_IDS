@@ -40,9 +40,11 @@ import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
 import javafx.scene.paint.Color;
+import javafx.scene.shape.SVGPath;
 import javafx.scene.text.Text;
 import javafx.scene.text.TextFlow;
 import javafx.stage.Stage;
+import javafx.util.Callback;
 
 
 public class ClientGUI extends Application implements Observer{
@@ -59,6 +61,7 @@ public class ClientGUI extends Application implements Observer{
 	private TextField nameTF;
 	private TextField serverAdressTF;
 	private ListView<String> usersListView;
+	private ListView<RoomExpendable> roomsListView;
 
 	private Button connexion;
 
@@ -88,10 +91,10 @@ public class ClientGUI extends Application implements Observer{
 		usersList = new ArrayList<Tuple<String, Color>>();
 
 		stage = primaryStage;
-		Scene scene = logInScene();
+		Scene scene = Chat();
 		primaryStage.setTitle("Client GUI");
-		primaryStage.setWidth(740);
-		primaryStage.setHeight(500);
+		primaryStage.setWidth(1080);
+		primaryStage.setHeight(800);
 		primaryStage.setResizable(false);        
 		primaryStage.setScene(scene);
 		primaryStage.show();
@@ -140,7 +143,6 @@ public class ClientGUI extends Application implements Observer{
 	}
 
 	protected Scene Chat() {
-		client.addObserverPostMessage(this);
 		BorderPane root = new BorderPane();
 		scrollPaneChat = new ScrollPane();
 		chatMessage = new TextField();
@@ -151,18 +153,89 @@ public class ClientGUI extends Application implements Observer{
 		chatMessage.setOnKeyPressed(e -> computeLine(e));
 
 		usersListView = new ListView<String>();
-		usersListView.setItems(client.getUsersList());
 		usersListView.setCellFactory(lv -> new UserNameCell());
 		usersListView.addEventFilter(MouseEvent.MOUSE_PRESSED, new EventHandler<MouseEvent>() {
 			@Override
 			public void handle(MouseEvent event) {
 				event.consume();
 			}
-		});;
+		});
+		
+//		roomsListView = new ListView<String>();
+//		roomsListView.setCellFactory(lv -> new RoomCell());
+//		roomsListView.addEventFilter(MouseEvent.MOUSE_PRESSED, new EventHandler<MouseEvent>() {
+//			@Override
+//			public void handle(MouseEvent event) {
+//				event.consume();
+//			}
+//		});
+		
+		roomsListView = new ListView<RoomExpendable>();
+		roomsListView.setCellFactory(new Callback<ListView<RoomExpendable>, ListCell<RoomExpendable>>() {
+
+			@Override
+			public ListCell<RoomExpendable> call(ListView<RoomExpendable> param) {
+				ListCell<RoomExpendable> cell = new ListCell<RoomExpendable>(){
+					@Override
+					protected void updateItem(final RoomExpendable item, boolean empty) {
+						super.updateItem(item, empty);
+						Platform.runLater(new Runnable() {
+							@Override
+							public void run() {
+								VBox vbox = new VBox();
+									
+								if (item != null && getIndex() > -1) {
+									final Label labelHeader = new Label(item.getRoomName());
+									labelHeader.setGraphic(createArrowPath(20, false));
+									labelHeader.setGraphicTextGap(10);
+									labelHeader.setId("tableview-columnheader-default-bg");
+									labelHeader.setOnMouseClicked(new EventHandler<MouseEvent>() {
+										@Override
+										public void handle(MouseEvent me) {
+											item.setHidden(item.isHidden() ? false : true);
+											System.out.println("New Click hidden ="+item.isHidden());
+											if (item.isHidden()) {
+												System.out.println("Remove");
+												labelHeader.setGraphic(createArrowPath(20, false));
+												vbox.getChildren().remove(vbox.getChildren().size() - 1);
+											}
+											else {
+												System.out.println("Add");
+												labelHeader.setGraphic(createArrowPath(20, true));
+												ListView<String> tmp = item.getUsersView();
+												tmp.setPrefWidth(roomsListView.getPrefWidth()-10);
+												tmp.setMaxHeight(item.getUsersInRoom().size() * 26);
+												vbox.getChildren().add(tmp);
+											}
+										}
+									});
+									vbox.getChildren().add(labelHeader);
+									if(!item.isHidden()){
+										labelHeader.setGraphic(createArrowPath(20, true));
+										ListView<String> tmp = item.getUsersView();
+										tmp.setPrefWidth(roomsListView.getPrefWidth()-10);
+										tmp.setMaxHeight(item.getUsersInRoom().size() * 26);
+										vbox.getChildren().add(tmp);
+									}
+								}
+								setGraphic(vbox);
+							}
+						});
+
+					}
+
+				};                 
+				return cell;
+			}
+		});
+		
 		
 		stage.setOnCloseRequest(h -> {
 			try {
-				serverInterface.leave(c_stub);
+				if (serverInterface != null){
+					serverInterface.leaveRoom(c_stub);
+					serverInterface.leave(c_stub);
+				}
 			} catch (RemoteException e) {
 				e.printStackTrace();
 			}
@@ -176,45 +249,205 @@ public class ClientGUI extends Application implements Observer{
 		
 		root.setCenter(scrollPaneChat);
 		root.setRight(usersListView);
+		root.setLeft(roomsListView);
 		root.setBottom(chatMessage);
-
-		try {
-			serverInterface.getHistory(c_stub);
-		} catch (RemoteException e) {
-			e.printStackTrace();
-		}
+		
+		help();
 
 		return new Scene(root);
 	}
 
-	private void computeLine(KeyEvent e) {
+	private void computeLine(KeyEvent ke) {
 		String msg = chatMessage.getText();
-		if(e.getCode() == KeyCode.ENTER && !msg.trim().isEmpty()) {
+		if(ke.getCode() == KeyCode.ENTER && !msg.trim().isEmpty()) {
 			try {
 				String[] tokens = msg.split(" ");
-				if (tokens[0].equals("/msg")){
-					if (tokens.length > 2){
-						if (usersList.stream().anyMatch(t -> t.x.equals(tokens[1]))  && !tokens[1].equals(client.getName())){
-							String privateMsg = String.join(" ", Arrays.copyOfRange(tokens, 2, tokens.length));
-							serverInterface.sendMessage(c_stub, new Message(client.getName(), tokens[1], privateMsg, true));
-							chatMessage.clear();
-						} else {
-							chatMessage.clear();
-							chatRoom.requestFocus();
-							if (tokens[1].equals(client.getName()))
-								chatMessage.setPromptText("Erreur : Vous ne pouvez pas vous envoyer un message privé");
-							else
-								chatMessage.setPromptText("Erreur : "+ tokens[1] + " n'est pas un nom d'utilisateur valide");
-						}
-					}
-				} else {
-					serverInterface.sendMessage(c_stub, new Message(client.getName(), "all", msg, false));
-					chatMessage.clear();
+				switch (tokens[0]){
+				case "/msg":
+					sendPrivateMessage(tokens);
+					break;
+				case "/con":
+					connexion(tokens);
+					break;
+				case "/exit":
+					exit(tokens);
+					break;
+				case "/join":
+					joinRoom(tokens);
+					break;
+				case "/leave":
+					leaveRoom(tokens);
+					break;
+				case "/create":
+					createRoom(tokens);
+					break;
+				case "/help":
+					help();
+					break;
+				default:
+					sendMessage(tokens);
 				}
-			} catch (RemoteException e1) {
-				e1.printStackTrace();
+				chatMessage.clear();
+			} catch (RemoteException | NotBoundException e) {
+				e.printStackTrace();
 			}
 		}
+	}
+
+	private void help() {
+		printRedMessage(
+				"Liste des commandes :\n"
+				+ "/con <Pseudo> <Serveur> <Port> Connexion à un serveur\n"
+				+ "/exit Deconnexion du serveur\n"
+				+ "/join <Salon> Rejoindre un salon de discussion\n"
+				+ "/leave Quitter le salon de discussion\n"
+				+ "/create <Salon> Créer un nouveau salon de discussion\n"
+				+ "/help Affiche la liste des commandes\n");
+	}
+	
+	private void createRoom(String[] tokens) {
+		if(serverInterface == null){
+			printRedMessage("Vous n'êtes connecté à aucun serveur\n");
+			help();
+		} else if (tokens.length != 2){
+			printRedMessage("Usage :\n/create <roomName> Créer la room <roomName>\n");
+		} else {
+			try {
+				if (serverInterface.createRoom(c_stub, tokens[1])){
+					printRedMessage("La room " + tokens[1] + " a bien été créé\n");
+				} else {
+					printRedMessage("Impossible de créer cette room\n");
+				}
+			} catch (RemoteException e) {
+				e.printStackTrace();
+			}
+		}
+	}
+
+	private void leaveRoom(String[] tokens) {
+		if(serverInterface == null){
+			printRedMessage("Vous n'êtes connecté à aucun serveur\n");
+			help();
+		} else if (tokens.length != 1){
+			printRedMessage("Usage :\n/leave Quitter la room\n");
+		} else if (client.room.trim().isEmpty()) {
+			printRedMessage("Vous n'êtes dans aucune room\n");
+		} else {
+			try {
+				serverInterface.leaveRoom(c_stub);
+				chatRoom.getChildren().clear();
+				printRedMessage("Vous avez quitter la room "+client.room+"\n");
+				client.room = "";
+			} catch (RemoteException e) {
+				e.printStackTrace();
+			}
+		}
+	}
+
+	private void joinRoom(String[] tokens) {
+		if(serverInterface == null){
+			printRedMessage("Vous n'êtes connecté à aucun serveur\n");
+			help();
+		} else if (tokens.length != 2){
+			printRedMessage("Usage :\n/join <roomName> Joindre la room <roomName>\n");
+		} else {
+			try {
+				if (serverInterface.joinRoom(c_stub, tokens[1])){
+					chatRoom.getChildren().clear();
+					client.room = tokens[1];
+					serverInterface.getHistory(c_stub);
+				} else {
+					printRedMessage("Impossible de joindre cette room\n");
+				}
+			} catch (RemoteException e) {
+				e.printStackTrace();
+			}
+		}
+	}
+
+	private void exit(String[] tokens) {
+		if(serverInterface == null){
+			printRedMessage("Vous n'êtes connecté à aucun serveur\n");
+			help();
+		} else if (tokens.length != 1){
+			printRedMessage("Usage :\n/exit Quitter le serveur\n");
+		} else {
+			try {
+				serverInterface.leave(c_stub);
+				chatRoom.getChildren().clear();
+			} catch (RemoteException e) {
+				e.printStackTrace();
+			}
+		}
+	}
+
+	private void connexion(String[] tokens) throws NotBoundException {
+		try{
+			if (tokens.length == 4){
+				registry = LocateRegistry.getRegistry(tokens[2], Integer.parseInt(tokens[3]));
+			} else {
+				registry = LocateRegistry.getRegistry("localhost", 2020);
+			}
+			serverInterface = (ServerInterface) registry.lookup("ServerInterface");
+			client = new Client(tokens[1]);
+			client.addObserverPostMessage(this);
+			usersListView.setItems(client.getUsersList());
+			roomsListView.setItems(client.getRoomList());
+			c_stub = (ClientInterface) UnicastRemoteObject.exportObject(client, 0);
+			if (serverInterface.join(c_stub)){
+				chatRoom.getChildren().clear();
+				printRedMessage("Vous êtes bien connecté sur le serveur\n");
+			} else {
+				printRedMessage("Impossible de rejoindre le serveur : nom déjà utilisé\n");
+			}
+		} catch(RemoteException e){
+			printRedMessage("Connexion au serveur impossible\n");
+		} catch(NumberFormatException e){
+			printRedMessage("Numéro de port invalide\n");
+		}
+		chatMessage.clear();
+	}
+	
+
+	private void sendMessage(String[] tokens) {
+		if(serverInterface == null){
+			printRedMessage("Vous n'êtes connecté à aucun serveur\n");
+			help();
+		} else {
+			try {
+				serverInterface.sendMessage(c_stub, new Message(client.getName(), "all", String.join(" ", tokens), false));
+			} catch (RemoteException e) {
+				e.printStackTrace();
+			}
+		}
+	}
+
+	private void sendPrivateMessage(String[] tokens) throws RemoteException {
+		if (client == null){
+			chatMessage.clear();
+			printRedMessage("Vous n'êtes connecté à aucun serveur\nCommande utiles :\n/help\t\tAide\n/connect <Pseudo> <AddressServer> <Port>\tConnexion à un nouveau"
+					+ " serveur (par défaut AddressServer=localhost Port=2020)\n");
+		} else if (tokens.length > 2){
+			if (usersList.stream().anyMatch(t -> t.x.equals(tokens[1]))  && !tokens[1].equals(client.getName())){
+				String privateMsg = String.join(" ", Arrays.copyOfRange(tokens, 2, tokens.length));
+				serverInterface.sendMessage(c_stub, new Message(client.getName(), tokens[1], privateMsg, true));
+				chatMessage.clear();
+			} else {
+				chatMessage.clear();
+				chatRoom.requestFocus();
+				if (tokens[1].equals(client.getName()))
+					chatMessage.setPromptText("Erreur : Vous ne pouvez pas vous envoyer un message privé");
+				else
+					chatMessage.setPromptText("Erreur : "+ tokens[1] + " n'est pas un nom d'utilisateur valide");
+			}
+		}
+	}
+
+	private void printRedMessage(String message) {
+		Text redMessage = new Text();
+		redMessage.setFill(Color.RED);
+		redMessage.setText(message);
+		chatRoom.getChildren().add(redMessage);		
 	}
 
 	@Override
@@ -249,6 +482,18 @@ public class ClientGUI extends Application implements Observer{
 				scrollPaneChat.setVvalue(1);
 			}
 		});
+	}
+	
+	private SVGPath createArrowPath(double height, boolean up) {
+	    SVGPath svg = new SVGPath();
+	    int width = (int) height / 4;
+	 
+	    if (up)
+	        svg.setContent("M" + width + " 0 L" + (width * 2) + " " + width + " L0 " + width + " Z");
+	    else
+	        svg.setContent("M0 0 L" + (width * 2) + " 0 L" + width + " " + width + " Z");
+	 
+	    return svg;
 	}
 
 	public class UserNameCell extends ListCell<String> {
@@ -306,7 +551,7 @@ public class ClientGUI extends Application implements Observer{
 					}
 				}
 			});
-			contextMenu.getItems().addAll(editColor);
+			contextMenu.getItems().add(editColor);
 			emptyProperty().addListener((obs, wasEmpty, isNowEmpty) -> {
 				if (isNowEmpty) {
 					setContextMenu(null);
@@ -316,5 +561,60 @@ public class ClientGUI extends Application implements Observer{
 			});
 		}
 	}
+	
+	public class RoomCell extends ListCell<String> {
+		@Override 
+		protected void updateItem(String roomName, boolean empty) {
+			super.updateItem(roomName, empty);
+			
+			Platform.runLater(new Runnable() {
+				@Override
+				public void run() {
+					if (empty || roomName == null || roomName.equals("")){
+						setGraphic(null);
+						setText(null);
+					} else {
+						setText(roomName);
+						setStyle("-fx-font-weight: bold;");
+					}
+				}
+			});
 
+			ContextMenu contextMenu = new ContextMenu();
+			MenuItem join = new MenuItem();
+			join.setText("Joindre");
+			join.setOnAction(event -> {
+				try {
+					chatRoom.getChildren().clear();
+					serverInterface.joinRoom(c_stub, roomName);
+					serverInterface.getHistory(c_stub);
+				} catch (RemoteException e) {
+					e.printStackTrace();
+				}				
+			});
+			MenuItem leave = new MenuItem();
+			leave.setText("Quitter");
+			leave.setOnAction(event -> {
+				try {
+					chatRoom.getChildren().clear();
+					serverInterface.leaveRoom(c_stub);
+				} catch (RemoteException e) {
+					e.printStackTrace();
+				}
+			});
+			if (client.room.equals(roomName)){
+				contextMenu.getItems().add(leave);
+			} else {
+				contextMenu.getItems().add(join);
+			}
+			
+			emptyProperty().addListener((obs, wasEmpty, isNowEmpty) -> {
+				if (isNowEmpty) {
+					setContextMenu(null);
+				} else {
+					setContextMenu(contextMenu);
+				}
+			});
+		}
+	}
 }

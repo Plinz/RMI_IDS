@@ -1,149 +1,155 @@
 package chat;
 
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileNotFoundException;
-import java.io.FileOutputStream;
-import java.io.IOException;
-import java.io.ObjectInputStream;
-import java.io.ObjectOutputStream;
 import java.rmi.RemoteException;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 
 public class Server implements ServerInterface {
-	private List<ClientInterface> clientList;
-	private List<Message> history;
-	private File historyFile;
-	private FileOutputStream fo;
-	private ObjectOutputStream oo;
+	private List<ClientInterface> clientInLobby;
+	private HashMap<String, Room> rooms;
+	private HashMap<String, String> usersRooms;
 
 	public Server(){
-		clientList = new ArrayList<ClientInterface>();
-		history = new ArrayList<Message>();
-
-		FileInputStream fi;
-		try {
-			historyFile = new File("historyFile");
-			fo = new FileOutputStream(historyFile, true);
-			if (historyFile.length() != 0) {
-				fi = new FileInputStream(historyFile);
-				ObjectInputStream oi = new ObjectInputStream(fi);
-				Message hist;
-				while(fi.available() > 0 && (hist = ((Message)oi.readObject())) != null){
-					history.add(hist);
-				}
-				oi.close();
-				fi.close();
-				oo = new ObjectOutputStream(fo) {
-					@Override
-					protected void writeStreamHeader() throws IOException {
-					}
-				};
-			} else {
-				oo = new ObjectOutputStream(fo);
-			}
-		} catch (FileNotFoundException e) {
-			e.printStackTrace();
-		} catch (IOException e) {
-			e.printStackTrace();
-		} catch (ClassNotFoundException e) {
-			e.printStackTrace();
-		}
-	}
-
-	void writeInFile(File file, Object obj){
-		try {
-			oo.writeObject(obj);
-			oo.flush();
-		} catch (IOException e) {
-			e.printStackTrace();
-		}
+		
+		rooms = new HashMap<String, Room>();
+		usersRooms = new HashMap<String, String>();
+		clientInLobby = new ArrayList<ClientInterface>();
 	}
 
 	@Override
 	public boolean join(ClientInterface client) throws RemoteException {
-		boolean joined = true;
-		for(ClientInterface c : clientList){
-			if (c.getName().equals(client.getName())){
-				joined = false;
+		boolean success = !clientInLobby.stream().filter(c -> {
+			try {
+				return c.getName().equals(client.getName());
+			} catch (RemoteException e) {
+				e.printStackTrace();
 			}
-		}
-		if(joined && !clientList.contains(client) && !client.getName().equals("SERVER") && 
-				!client.getName().equals("ERROR") && !client.getName().trim().isEmpty()){
-			Message serverMsg = new Message("SERVER", client.getName(), client.getName()+" rentre dans le chat", false);
-			writeInFile(historyFile, serverMsg);
-			history.add(serverMsg);
-			clientList.forEach(c -> {
+			return false;
+		}).findAny().isPresent();
+		if (success && !usersRooms.containsKey(client.getName())){
+			clientInLobby.add(client);
+			rooms.keySet().forEach(r -> {
 				try {
-					c.postMessage(serverMsg);
-				} catch (RemoteException e1) {
-					e1.printStackTrace();
-				}
-			});
-
-			clientList.add(client);
-			clientList.forEach(c -> {
-				try {
-					client.userJoin(c.getName());
-					if (!client.getName().equals(c.getName()))
-						c.userJoin(client.getName());
+					client.roomCreated(r);
 				} catch (RemoteException e) {
 					e.printStackTrace();
 				}
 			});
-			System.out.println("Join Client : "+client.getName());
+			success = true;
+			usersRooms.forEach((u, r) -> {
+				try {
+					client.userJoin(u, r);
+				} catch (RemoteException e) {
+					e.printStackTrace();
+				}
+			});
 		} else {
-			joined = false;
+			success = false;
 		}
-		return joined;
+		return success;
 	}
 
 	@Override
 	public void leave(ClientInterface client) throws RemoteException {
-		if(clientList.contains(client)){
-			Message serverMsg = new Message("SERVER", client.getName(), client.getName()+" quitte le chat", false);
-			writeInFile(historyFile, serverMsg);
-			history.add(serverMsg);
-			clientList.forEach(c -> {
-				try {
-					c.postMessage(serverMsg);
-				} catch (RemoteException e1) {
-					e1.printStackTrace();
-				}
-			});
-			String name = client.getName();
-			clientList.remove(client);
-			clientList.forEach(c -> {
-				try {
-					c.userLeave(name);
-				} catch (RemoteException e) {
-					e.printStackTrace();
-				}
-			});
-			System.out.println("Leave Client : "+name);
+		if(clientInLobby.contains(client)){
+			clientInLobby.remove(client);
 		}
 	}
 
 	@Override
+	public boolean createRoom(ClientInterface client, String name) throws RemoteException {
+		boolean success = false;
+		if(!name.trim().isEmpty() && !rooms.containsKey(name)){
+			rooms.put(name, new Room(name, client));
+			rooms.forEach((n, r) -> r.roomCreated(name));
+			clientInLobby.forEach(c -> {
+				try {
+					c.roomCreated(name);
+				} catch (RemoteException e) {
+					e.printStackTrace();
+				}
+			});
+			success = true;
+		}
+		return success;
+	}
+	
+	@Override
+	public void destroyRoom(ClientInterface client, String name) throws RemoteException {
+		Room toDestroy = rooms.get(name);
+		if (toDestroy.getOwner().getName().equals(client.getName())){
+			toDestroy.destroy();
+			rooms.forEach((n, r) -> r.roomDestroyed(name));
+			clientInLobby.forEach(c -> {
+				try {
+					c.roomDestroyed(name);
+				} catch (RemoteException e) {
+					e.printStackTrace();
+				}
+			});
+			rooms.remove(name);
+		}
+	}
+
+	@Override
+	public boolean joinRoom(ClientInterface client, String room) throws RemoteException {
+		String name = client.getName();
+		boolean success = false;
+		if (rooms.containsKey(room) && !usersRooms.getOrDefault(name, "").equals(room)){
+			if (usersRooms.containsKey(name)){
+				leaveRoom(client);
+			}
+			rooms.get(room).join(client);
+			usersRooms.put(client.getName(), room);
+			clientInLobby.remove(client);
+			rooms.forEach((n, r) -> r.userJoin(name, room));
+			clientInLobby.forEach(c -> {
+				try {
+					c.userJoin(name, room);
+				} catch (RemoteException e) {
+					e.printStackTrace();
+				}
+			});
+			success = true;
+		}
+		return success;
+	}
+
+	@Override
+	public void leaveRoom(ClientInterface client) throws RemoteException {
+		String name = client.getName();
+		String room = usersRooms.get(name);
+		System.out.println("Leave Room "+name+ " "+room);
+		if (room != null){
+			rooms.get(room).leave(client);
+			usersRooms.remove(name);
+			clientInLobby.add(client);
+			rooms.forEach((n, r) -> r.userLeave(name, room));
+			clientInLobby.forEach(c -> {
+				try {
+					c.userLeave(name, room);
+				} catch (RemoteException e) {
+					e.printStackTrace();
+				}
+			});
+		}
+	}
+	
+	@Override
 	public void sendMessage(ClientInterface client, Message message) throws RemoteException {
-		if (clientList.contains(client)){
-			System.out.println("Nouveau Message " + message);
-			if(!message.isPrivate()){
-				writeInFile(historyFile, message);
-				history.add(message);
-			}
-			for(ClientInterface c : clientList){
-				if(!message.isPrivate() || ((c.getName().equals(message.getTo()) || c.getName().equals(message.getFrom())) && message.isPrivate()))
-					c.postMessage(message);
-			}
+		String name = client.getName();
+		String room = usersRooms.get(name);
+		if (room != null){
+			rooms.get(room).sendMessage(message);
 		}
 	}
 
 	@Override
 	public void getHistory(ClientInterface client) throws RemoteException {
-		for(Message m : history){
-			client.postMessage(m);
+		String room = usersRooms.get(client.getName());
+		if (room != null){
+			rooms.get(room).getHistory(client);
 		}	
 	}
 }

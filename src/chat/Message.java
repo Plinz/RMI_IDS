@@ -9,7 +9,15 @@ public class Message implements Serializable{
 	private String to;
 	private String data;
 	private boolean isPrivate;
-	
+
+	/**
+	 * Créer un objet Message qui sera envoyé au server. Si le message est privé on définit le boolean
+	 * isPrivate à Vrai. Si le message est à destination d'un utilisateur privé, il faut spécifier le destinataire
+	 * @param from
+	 * @param to
+	 * @param data
+	 * @param isPrivate
+	 */
 	public Message(String from, String to, String data, boolean isPrivate) {
 		this.from = from;
 		this.to = to;
@@ -25,6 +33,10 @@ public class Message implements Serializable{
 		this.from = from;
 	}
 
+	/**
+	 * Donne le destinataire du message lorsque le message est privé
+	 * @return Le nom de l'utilisateur destinataire du message
+	 */
 	public String getTo() {
 		return to;
 	}
@@ -45,6 +57,10 @@ public class Message implements Serializable{
 		return isPrivate;
 	}
 
+	/**
+	 * Définit si le message est privé ou public
+	 * @param isPrivate
+	 */
 	public void setPrivate(boolean isPrivate) {
 		this.isPrivate = isPrivate;
 	}

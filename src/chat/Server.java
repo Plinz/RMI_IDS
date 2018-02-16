@@ -59,6 +59,12 @@ public class Server implements ServerInterface {
 		}
 	}
 
+
+	/**
+	 * Créer un salon de discution de nom name
+	 * @param client L'object client créant la discution
+	 * @param name Le nom du salon de discution
+	 */
 	@Override
 	public boolean createRoom(ClientInterface client, String name) throws RemoteException {
 		boolean success = false;
@@ -98,6 +104,12 @@ public class Server implements ServerInterface {
 		return success;
 	}
 
+	/**
+	 * Permet à un client de rejoindre un salon de discution existant dont le nom room est passé en
+	 * paramètre. Le client à ajouter de doit pas être déjà présent dans un salon de discution
+	 * @param client l'object client joignant le salon
+	 * @param room le nom du salon à rejoindre
+	 */
 	@Override
 	public boolean joinRoom(ClientInterface client, String room) throws RemoteException {
 		String name = client.getName();
@@ -122,6 +134,10 @@ public class Server implements ServerInterface {
 		return success;
 	}
 
+	/**
+	 * Permet à un client de quitter un salon de discution
+	 * @param client l'object client quittant le salon
+	 */
 	@Override
 	public void leaveRoom(ClientInterface client) throws RemoteException {
 		String name = client.getName();
@@ -141,7 +157,13 @@ public class Server implements ServerInterface {
 			});
 		}
 	}
-	
+
+	/**
+	 * Le client envoi un message public ou privé. Si le message est public alors il est envoyé
+	 * à tout le salon. Sinon le message comporte le nom de l'utilisateur à qui envoyer le message en privé
+	 * @param client L'object client quittant le salon
+	 * @param message Le message a envoyer
+	 */
 	@Override
 	public void sendMessage(ClientInterface client, Message message) throws RemoteException {
 		String name = client.getName();
@@ -157,6 +179,10 @@ public class Server implements ServerInterface {
 		}
 	}
 
+	/**
+	 * Envoi à un client tout l'historique du salon qu'il a rejoint
+	 * @param client L'object client dans le salon
+	 */
 	@Override
 	public void getHistory(ClientInterface client) throws RemoteException {
 		String room = usersRooms.get(client.getName());

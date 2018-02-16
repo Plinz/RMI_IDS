@@ -58,6 +58,7 @@ public class ClientGUI extends Application implements Observer{
 	private TextField chatMessage;
 	private TextFlow chatRoom;
 	private ScrollPane scrollPaneChat;
+	private ContextMenu cm;
 
 
 	public static void main(String[] args) {
@@ -124,6 +125,29 @@ public class ClientGUI extends Application implements Observer{
 		root.setLeft(roomsListView);
 		root.setBottom(chatMessage);
 		
+		cm = new ContextMenu();
+		MenuItem exit = new MenuItem();
+		exit.setText("Déconnexion du serveur");
+		exit.setOnAction(event -> {destroyRoom(new String[]{"/exit"});});
+		MenuItem labelCreate = new MenuItem();
+		MenuItem create = new MenuItem();
+		TextField fieldNameRoom = new TextField();
+		fieldNameRoom.setPromptText("Nom du salon");
+		fieldNameRoom.setOnKeyPressed(e -> {
+			if (e.getCode() == KeyCode.ENTER){
+				createRoom(new String[]{"/join", fieldNameRoom.getText()});
+				cm.getItems().clear();
+				cm.getItems().addAll(create, exit);
+			}			
+		});
+		labelCreate.setGraphic(fieldNameRoom);
+		create.setText("Créer un nouveau salon");
+		create.setOnAction(event -> {
+			cm.getItems().clear();
+			cm.getItems().add(labelCreate);
+			cm.show((Node) fieldNameRoom, cm.getAnchorX(), cm.getAnchorY());
+		});
+		cm.getItems().addAll(create, exit);
 		help();
 
 		return new Scene(root);
@@ -271,6 +295,8 @@ public class ClientGUI extends Application implements Observer{
 			try {
 				serverInterface.leave(c_stub);
 				chatRoom.getChildren().clear();
+				roomsListView.getItems().clear();
+				scrollPaneChat.setContextMenu(null);
 			} catch (RemoteException e) {
 				e.printStackTrace();
 			}
@@ -296,6 +322,7 @@ public class ClientGUI extends Application implements Observer{
 			if (serverInterface.join(c_stub)){
 				chatRoom.getChildren().clear();
 				client.room = "Accueil";
+				scrollPaneChat.setContextMenu(cm);
 				printRedMessage("Vous êtes bien connecté sur le serveur\n");
 			} else {
 				printRedMessage("Impossible de rejoindre le serveur : nom déjà utilisé\n");
@@ -521,10 +548,6 @@ public class ClientGUI extends Application implements Observer{
 					MenuItem labelCreate = new MenuItem();
 					TextField fieldNameRoom = new TextField();
 					fieldNameRoom.setPromptText("Nom du salon");
-					fieldNameRoom.setOnKeyPressed(e -> {
-						if (e.getCode() == KeyCode.ENTER)
-							createRoom(new String[]{"/join", fieldNameRoom.getText()});
-					});
 					labelCreate.setGraphic(fieldNameRoom);
 					MenuItem create = new MenuItem();
 					create.setText("Créer un nouveau salon");
@@ -536,12 +559,23 @@ public class ClientGUI extends Application implements Observer{
 					MenuItem destroy = new MenuItem();
 					destroy.setText("Détruire le salon");
 					destroy.setOnAction(event -> {destroyRoom(new String[]{"/destroy", item.getRoomName()});});
-					
+					MenuItem exit = new MenuItem();
+					exit.setText("Déconnexion du serveur");
+					exit.setOnAction(event -> {destroyRoom(new String[]{"/exit"});});
+					fieldNameRoom.setOnKeyPressed(e -> {
+						if (e.getCode() == KeyCode.ENTER){
+							createRoom(new String[]{"/join", fieldNameRoom.getText()});
+							contextMenu.getItems().clear();
+							if(!empty && item != null){
+								contextMenu.getItems().add(client.room.equals(item.getRoomName())?leave:join);
+							}
+							contextMenu.getItems().addAll(create, exit);
+						}
+					});
 					if(!empty && item != null){
 						contextMenu.getItems().add(client.room.equals(item.getRoomName())?leave:join);
 					}
-					contextMenu.getItems().add(create);
-					contextMenu.setAutoHide(false);
+					contextMenu.getItems().addAll(create, exit);
 					setContextMenu(contextMenu);
 				}
 			});

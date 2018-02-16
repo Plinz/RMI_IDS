@@ -11,6 +11,8 @@
 - Visualisation de la liste des utilisateurs connectés au chat
 - Déconnexion d'un utilisateur du chat
 - Les noms d'utilisateurs du chat sont uniques
+- Envoi de messages privés entre utilisateurs 
+- Gestion de plusieurs salons de discution 
 
 ## Utilisation
 

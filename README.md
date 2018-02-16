@@ -27,6 +27,7 @@ Serveur : Lancez le jar executable (sur votre serveur via ssh) (avec IP=l'adress
 
 	java -jar -Djava.rmi.server.hostname="IP" Server.jar
 	
+
 ### Via les sources
 
 Compilez les sources avec Java 8
@@ -43,4 +44,22 @@ Pour le client à la connexion vous pouvez joindre un serveur avec la commande :
 	/con <Pseudo>					(Le port sera 1099 et le server localhost)
 	
 Lorsque vous êtes connecté à un serveur vous arrivez sur le salon Accueil.
-Pour en créer un nouveau
+Pour en créer un nouveau clic droit sur le panneau de gauche et nouveau salon ou lancer la commande :
+	
+	/create <NomDuSalon>
+	
+Pour joindre un autre salon clic droit sur le nom du salon à joindre et joindre le salon ou lancer la commande :
+
+	/join <NomduSalon>
+	
+Pour quitter le salon clic droit sur le salon à quitter et quitter le salon ou lancer la commande :
+
+	/leave <NomDuSalon>
+	
+Pour détruire un salon que l'on a créer clic droit sur le salon à détruire et détruire le salon ou lancer la commande :
+
+	/destroy <NomDuSalon>
+	
+Pour se déconnecter du serveur lancer la commande :
+
+	/exit

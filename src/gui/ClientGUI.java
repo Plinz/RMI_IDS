@@ -98,7 +98,6 @@ public class ClientGUI extends Application implements Observer{
 		chatRoom = new TextFlow();
 
 		chatMessage.setPromptText("Enter Your Chat Message Here");
-
 		chatMessage.setOnKeyPressed(e -> computeLine(e));
 
 		roomsListView = new ListView<RoomExpendable>();
@@ -284,6 +283,8 @@ public class ClientGUI extends Application implements Observer{
 			if (tokens.length == 4){
 				registry = LocateRegistry.getRegistry(tokens[2], Integer.parseInt(tokens[3]));
 				portToExport = 2000;
+			} else if (tokens.length == 3){
+				registry = LocateRegistry.getRegistry(tokens[2], 1099);
 			} else {
 				registry = LocateRegistry.getRegistry("localhost", 1099);
 			}
@@ -306,6 +307,7 @@ public class ClientGUI extends Application implements Observer{
 			printRedMessage("Numéro de port invalide\n");
 		}
 		chatMessage.clear();
+		help();
 	}
 	
 

@@ -41,7 +41,6 @@ public class Server implements ServerInterface {
 	public void leave(ClientInterface client) throws RemoteException {
 		String name = client.getName();
 		String room = usersRooms.get(name);
-		System.out.println("Leave Room "+name+ " "+room);
 		if (room != null){
 			rooms.get(room).leave(client);
 			usersRooms.remove(name);
@@ -88,7 +87,6 @@ public class Server implements ServerInterface {
 			rooms.forEach((n, r) -> r.userJoin(name, room));
 			success = true;
 		}
-		usersRooms.forEach((n,r) -> {System.out.println("Join fin "+n+" "+r);});
 		return success;
 	}
 
@@ -96,7 +94,6 @@ public class Server implements ServerInterface {
 	public void leaveRoom(ClientInterface client) throws RemoteException {
 		String name = client.getName();
 		String room = usersRooms.get(name);
-		System.out.println("Leave Room "+name+ " "+room);
 		if (room != null && !room.equals("Accueil")){
 			rooms.forEach((n, r) -> r.userLeave(name, room));
 			rooms.get(room).leave(client);
@@ -104,7 +101,6 @@ public class Server implements ServerInterface {
 			if (!room.equals("Accueil"))
 				joinRoom(client, "Accueil");
 		}
-		usersRooms.forEach((n,r) -> {System.out.println("Leave fin "+n+" "+r);});
 	}
 	
 	@Override

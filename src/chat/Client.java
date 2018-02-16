@@ -62,7 +62,9 @@ public class Client implements ClientInterface{
 		Platform.runLater(new Runnable() {
 			@Override
 			public void run() {
+				System.out.println("UserJoin "+name+ " in "+room);
 				roomList.stream().filter(r -> r.getRoomName().equals(room)).findFirst().get().getUsersInRoom().add(name);
+				roomList.setAll(roomList.toArray(new RoomExpendable[roomList.size()]));
 			}
 		});
 		
@@ -74,7 +76,9 @@ public class Client implements ClientInterface{
 		Platform.runLater(new Runnable() {
 			@Override
 			public void run() {
+				System.out.println("UserJoin "+name+ " of "+room);
 				roomList.stream().filter(r -> r.getRoomName().equals(room)).findFirst().get().getUsersInRoom().remove(name);
+				roomList.setAll(roomList.toArray(new RoomExpendable[roomList.size()]));
 			}
 		});
 	}
@@ -91,7 +95,7 @@ public class Client implements ClientInterface{
 
 	@Override
 	public void disconnect() throws RemoteException {
-				
+		this.room = "";
 	}
 
 	

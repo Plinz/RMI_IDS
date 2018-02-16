@@ -14,7 +14,7 @@ import java.util.List;
 public class Room {
 
 	private List<ClientInterface> clientList;
-	private ClientInterface owner;
+	private String owner;
 	private List<Message> history;
 	private File historyFile;
 	private FileOutputStream fo;
@@ -24,7 +24,11 @@ public class Room {
 
 	public Room(String name, ClientInterface owner) {
 		this.name = name;
-		this.owner = owner;
+		try {
+			this.owner = owner.getName();
+		} catch (RemoteException e1) {
+			e1.printStackTrace();
+		}
 
 		clientList = new ArrayList<ClientInterface>();
 		history = new ArrayList<Message>();
@@ -84,7 +88,6 @@ public class Room {
 			Message serverMsg = new Message("SERVER", null, userName+" rentre dans le chat", false);
 			writeInFile(historyFile, serverMsg);
 			history.add(serverMsg);
-			clientList.add(client);
 			clientList.forEach(c -> {
 				try {
 					c.postMessage(serverMsg);
@@ -92,6 +95,7 @@ public class Room {
 					e.printStackTrace();
 				}
 			});
+			clientList.add(client);
 		} catch (RemoteException e) {
 			e.printStackTrace();
 		}
@@ -134,11 +138,11 @@ public class Room {
 		}	
 	}
 
-	public ClientInterface getOwner() {
+	public String getOwner() {
 		return owner;
 	}
 
-	public void setOwner(ClientInterface owner) {
+	public void setOwner(String owner) {
 		this.owner = owner;
 	}
 

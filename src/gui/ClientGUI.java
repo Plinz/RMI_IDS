@@ -20,12 +20,9 @@ import chat.ServerInterface;
 import chat.Tuple;
 import javafx.application.Application;
 import javafx.application.Platform;
-import javafx.event.ActionEvent;
 import javafx.event.EventHandler;
-import javafx.geometry.Insets;
 import javafx.scene.Node;
 import javafx.scene.Scene;
-import javafx.scene.control.Button;
 import javafx.scene.control.ContextMenu;
 import javafx.scene.control.Label;
 import javafx.scene.control.ListCell;
@@ -35,16 +32,15 @@ import javafx.scene.control.ScrollPane;
 import javafx.scene.control.TextField;
 import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyEvent;
+import javafx.scene.input.MouseButton;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.BorderPane;
-import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
 import javafx.scene.paint.Color;
 import javafx.scene.shape.SVGPath;
 import javafx.scene.text.Text;
 import javafx.scene.text.TextFlow;
 import javafx.stage.Stage;
-import javafx.util.Callback;
 
 
 public class ClientGUI extends Application implements Observer{
@@ -56,14 +52,7 @@ public class ClientGUI extends Application implements Observer{
 	private List<Tuple<String, Color>> usersList;
 	private List<Color> colors;
 
-	private Label nameL;
-	private Label serverAdressL;
-	private TextField nameTF;
-	private TextField serverAdressTF;
-	private ListView<String> usersListView;
 	private ListView<RoomExpendable> roomsListView;
-
-	private Button connexion;
 
 	private TextField chatMessage;
 	private TextFlow chatRoom;
@@ -71,6 +60,7 @@ public class ClientGUI extends Application implements Observer{
 
 
 	public static void main(String[] args) {
+		System.setProperty("sun.rmi.transport.tcp.localHostnameTimeOut", "1000000");
 		launch(args);
 	}
 
@@ -100,48 +90,6 @@ public class ClientGUI extends Application implements Observer{
 		primaryStage.show();
 	}
 
-	public Scene logInScene(){
-		BorderPane root = new BorderPane();
-		connexion = new Button("Connexion");
-		serverAdressL = new Label("Server Address");
-		serverAdressTF = new TextField();
-		serverAdressTF.setPromptText("Server Address");
-		serverAdressTF.setText("localhost");
-		serverAdressTF.setEditable(true);
-
-		nameL = new Label("User Name");
-		nameTF = new TextField();
-		nameTF.setPromptText("User Name");
-		nameTF.setEditable(true);	
-		root.setOnKeyPressed(e -> {
-			if(e.getCode() == KeyCode.ENTER)
-				connexion.fire();
-		});
-		connexion.setOnAction(new EventHandler<ActionEvent>() {
-			@Override
-			public void handle(ActionEvent event) {
-				try {
-					registry = LocateRegistry.getRegistry(serverAdressTF.getText().trim(), 2020);
-					serverInterface = (ServerInterface) registry.lookup("ServerInterface");
-					client = new Client(nameTF.getText().trim());
-					c_stub = (ClientInterface) UnicastRemoteObject.exportObject(client, 0);
-					if (serverInterface.join(c_stub)){
-						stage.setScene(Chat());
-					} else {
-						nameTF.setText("ERROR");
-					}
-				} catch (RemoteException | NotBoundException e) {
-					e.printStackTrace();
-				}
-			}
-		});
-		root.setCenter(new VBox(30, new HBox(10, serverAdressL, serverAdressTF), new HBox(10, nameL, nameTF), connexion));
-		root.setPadding(new Insets(60));
-
-
-		return new Scene(root);
-	}
-
 	protected Scene Chat() {
 		BorderPane root = new BorderPane();
 		scrollPaneChat = new ScrollPane();
@@ -152,87 +100,12 @@ public class ClientGUI extends Application implements Observer{
 
 		chatMessage.setOnKeyPressed(e -> computeLine(e));
 
-		usersListView = new ListView<String>();
-		usersListView.setCellFactory(lv -> new UserNameCell());
-		usersListView.addEventFilter(MouseEvent.MOUSE_PRESSED, new EventHandler<MouseEvent>() {
-			@Override
-			public void handle(MouseEvent event) {
-				event.consume();
-			}
-		});
-		
-//		roomsListView = new ListView<String>();
-//		roomsListView.setCellFactory(lv -> new RoomCell());
-//		roomsListView.addEventFilter(MouseEvent.MOUSE_PRESSED, new EventHandler<MouseEvent>() {
-//			@Override
-//			public void handle(MouseEvent event) {
-//				event.consume();
-//			}
-//		});
-		
 		roomsListView = new ListView<RoomExpendable>();
-		roomsListView.setCellFactory(new Callback<ListView<RoomExpendable>, ListCell<RoomExpendable>>() {
-
-			@Override
-			public ListCell<RoomExpendable> call(ListView<RoomExpendable> param) {
-				ListCell<RoomExpendable> cell = new ListCell<RoomExpendable>(){
-					@Override
-					protected void updateItem(final RoomExpendable item, boolean empty) {
-						super.updateItem(item, empty);
-						Platform.runLater(new Runnable() {
-							@Override
-							public void run() {
-								VBox vbox = new VBox();
-									
-								if (item != null && getIndex() > -1) {
-									final Label labelHeader = new Label(item.getRoomName());
-									labelHeader.setGraphic(createArrowPath(20, false));
-									labelHeader.setGraphicTextGap(10);
-									labelHeader.setId("tableview-columnheader-default-bg");
-									labelHeader.setOnMouseClicked(new EventHandler<MouseEvent>() {
-										@Override
-										public void handle(MouseEvent me) {
-											item.setHidden(item.isHidden() ? false : true);
-											System.out.println("New Click hidden ="+item.isHidden());
-											if (item.isHidden()) {
-												System.out.println("Remove");
-												labelHeader.setGraphic(createArrowPath(20, false));
-												vbox.getChildren().remove(vbox.getChildren().size() - 1);
-											}
-											else {
-												System.out.println("Add");
-												labelHeader.setGraphic(createArrowPath(20, true));
-												ListView<String> tmp = item.getUsersView();
-												tmp.setPrefWidth(roomsListView.getPrefWidth()-10);
-												tmp.setMaxHeight(item.getUsersInRoom().size() * 26);
-												vbox.getChildren().add(tmp);
-											}
-										}
-									});
-									vbox.getChildren().add(labelHeader);
-									if(!item.isHidden()){
-										labelHeader.setGraphic(createArrowPath(20, true));
-										ListView<String> tmp = item.getUsersView();
-										tmp.setPrefWidth(roomsListView.getPrefWidth()-10);
-										tmp.setMaxHeight(item.getUsersInRoom().size() * 26);
-										vbox.getChildren().add(tmp);
-									}
-								}
-								setGraphic(vbox);
-							}
-						});
-
-					}
-
-				};                 
-				return cell;
-			}
-		});
-		
+		roomsListView.setCellFactory(cf -> new RoomCell());
 		
 		stage.setOnCloseRequest(h -> {
 			try {
-				if (serverInterface != null){
+				if (serverInterface != null && c_stub != null){
 					serverInterface.leaveRoom(c_stub);
 					serverInterface.leave(c_stub);
 				}
@@ -248,7 +121,6 @@ public class ClientGUI extends Application implements Observer{
 		scrollPaneChat.setVvalue(1);
 		
 		root.setCenter(scrollPaneChat);
-		root.setRight(usersListView);
 		root.setLeft(roomsListView);
 		root.setBottom(chatMessage);
 		
@@ -281,6 +153,9 @@ public class ClientGUI extends Application implements Observer{
 				case "/create":
 					createRoom(tokens);
 					break;
+				case "/destroy":
+					destroyRoom(tokens);
+					break;
 				case "/help":
 					help();
 					break;
@@ -302,6 +177,7 @@ public class ClientGUI extends Application implements Observer{
 				+ "/join <Salon> Rejoindre un salon de discussion\n"
 				+ "/leave Quitter le salon de discussion\n"
 				+ "/create <Salon> Créer un nouveau salon de discussion\n"
+				+ "/destroy <Salon> Détruire un salon de discussion\n"
 				+ "/help Affiche la liste des commandes\n");
 	}
 	
@@ -310,13 +186,32 @@ public class ClientGUI extends Application implements Observer{
 			printRedMessage("Vous n'êtes connecté à aucun serveur\n");
 			help();
 		} else if (tokens.length != 2){
-			printRedMessage("Usage :\n/create <roomName> Créer la room <roomName>\n");
+			printRedMessage("Usage :\n/create <Salon> Créer un nouveau salon de discussion\n");
 		} else {
 			try {
 				if (serverInterface.createRoom(c_stub, tokens[1])){
 					printRedMessage("La room " + tokens[1] + " a bien été créé\n");
 				} else {
 					printRedMessage("Impossible de créer cette room\n");
+				}
+			} catch (RemoteException e) {
+				e.printStackTrace();
+			}
+		}
+	}
+	
+	private void destroyRoom(String[] tokens) {
+		if(serverInterface == null){
+			printRedMessage("Vous n'êtes connecté à aucun serveur\n");
+			help();
+		} else if (tokens.length != 2){
+			printRedMessage("Usage :\n/destroy <Salon> Détruire un salon de discussion\n");
+		} else {
+			try {
+				if (serverInterface.destroyRoom(c_stub, tokens[1])){
+					printRedMessage("La room " + tokens[1] + " a bien été détruite\n");
+				} else {
+					printRedMessage("Impossible de détruire cette room\n");
 				}
 			} catch (RemoteException e) {
 				e.printStackTrace();
@@ -336,7 +231,7 @@ public class ClientGUI extends Application implements Observer{
 			try {
 				serverInterface.leaveRoom(c_stub);
 				chatRoom.getChildren().clear();
-				printRedMessage("Vous avez quitter la room "+client.room+"\n");
+				printRedMessage("Vous avez quitté la room "+client.room+"\n");
 				client.room = "";
 			} catch (RemoteException e) {
 				e.printStackTrace();
@@ -383,17 +278,18 @@ public class ClientGUI extends Application implements Observer{
 
 	private void connexion(String[] tokens) throws NotBoundException {
 		try{
+			int portToExport = 0;
 			if (tokens.length == 4){
 				registry = LocateRegistry.getRegistry(tokens[2], Integer.parseInt(tokens[3]));
+				portToExport = 2000;
 			} else {
-				registry = LocateRegistry.getRegistry("localhost", 2020);
+				registry = LocateRegistry.getRegistry("localhost", 1099);
 			}
 			serverInterface = (ServerInterface) registry.lookup("ServerInterface");
 			client = new Client(tokens[1]);
 			client.addObserverPostMessage(this);
-			usersListView.setItems(client.getUsersList());
 			roomsListView.setItems(client.getRoomList());
-			c_stub = (ClientInterface) UnicastRemoteObject.exportObject(client, 0);
+			c_stub = (ClientInterface) UnicastRemoteObject.exportObject(client, portToExport);
 			if (serverInterface.join(c_stub)){
 				chatRoom.getChildren().clear();
 				printRedMessage("Vous êtes bien connecté sur le serveur\n");
@@ -402,6 +298,7 @@ public class ClientGUI extends Application implements Observer{
 			}
 		} catch(RemoteException e){
 			printRedMessage("Connexion au serveur impossible\n");
+			e.printStackTrace();
 		} catch(NumberFormatException e){
 			printRedMessage("Numéro de port invalide\n");
 		}
@@ -413,6 +310,8 @@ public class ClientGUI extends Application implements Observer{
 		if(serverInterface == null){
 			printRedMessage("Vous n'êtes connecté à aucun serveur\n");
 			help();
+		} else if (client.room.trim().isEmpty()) {
+			printRedMessage("Vous n'êtes dans aucune room\n");
 		} else {
 			try {
 				serverInterface.sendMessage(c_stub, new Message(client.getName(), "all", String.join(" ", tokens), false));
@@ -495,8 +394,8 @@ public class ClientGUI extends Application implements Observer{
 	 
 	    return svg;
 	}
-
-	public class UserNameCell extends ListCell<String> {
+	
+	public class UserCell extends ListCell<String> {
 		@Override 
 		protected void updateItem(String userName, boolean empty) {
 			super.updateItem(userName, empty);
@@ -517,8 +416,9 @@ public class ClientGUI extends Application implements Observer{
 							usersList.add(new Tuple<String, Color>(userName, c));
 							ListIterator<Node> it = chatRoom.getChildren().listIterator(chatRoom.getChildren().size());
 							Text n;
-							while(it.hasPrevious() && !((n = (Text) it.previous()).getText().equals(userName+" rentre dans le chat\n") && n.getFill().equals(Color.RED))){
-								System.out.println(n.getText());
+							while (it.hasPrevious() && !(((n = (Text) it.previous()).getText().equals(userName + " rentre dans la chat\n")
+									|| n.getText().equals(userName + " quitte le chat\n"))
+									&& n.getFill().equals(Color.RED))) {
 								if(n.getText().equals(userName)){
 									n.setFill(c);
 									it.set(n);
@@ -544,7 +444,9 @@ public class ClientGUI extends Application implements Observer{
 				setTextFill(newColor);
 				ListIterator<Node> it = chatRoom.getChildren().listIterator(chatRoom.getChildren().size());
 				Text n;
-				while(it.hasPrevious() && !((n = (Text) it.previous()).getText().equals(getText()+" rentre dans le chat\n") && n.getFill().equals(Color.RED))){
+				while (it.hasPrevious() && !(((n = (Text) it.previous()).getText().equals(userName + " rentre dans la chat\n")
+						|| n.getText().equals(userName + " quitte le chat\n"))
+						&& n.getFill().equals(Color.RED))) {
 					if(n.getText().equals(getText()) && !n.getFill().equals(Color.BLACK)){
 						n.setFill(newColor);
 						it.set(n);
@@ -562,7 +464,85 @@ public class ClientGUI extends Application implements Observer{
 		}
 	}
 	
-	public class RoomCell extends ListCell<String> {
+	public class RoomCell extends ListCell<RoomExpendable> {
+		@Override
+		protected void updateItem(final RoomExpendable item, boolean empty) {
+			super.updateItem(item, empty);
+			Platform.runLater(new Runnable() {
+				@Override
+				public void run() {
+					VBox vbox = new VBox();						
+					if (item != null && getIndex() > -1 && item.getRoomName() != null) {
+						final Label labelHeader = new Label(item.getRoomName());
+						labelHeader.setGraphic(createArrowPath(20, false));
+						labelHeader.setGraphicTextGap(10);
+						labelHeader.setId("tableview-columnheader-default-bg");
+						ListView<String> tmp = item.getUsersView();
+						tmp.setCellFactory(lv -> new UserCell());
+						tmp.setPrefWidth(roomsListView.getPrefWidth()-10);
+						tmp.setMaxHeight(item.getUsersInRoom().size() * 26);
+						labelHeader.setOnMouseClicked(new EventHandler<MouseEvent>() {
+							@Override
+							public void handle(MouseEvent me) {
+								if (me.getButton() == MouseButton.PRIMARY){
+									item.setHidden(item.isHidden() ? false : true);
+									if (item.isHidden()) {
+										labelHeader.setGraphic(createArrowPath(20, false));
+										vbox.getChildren().remove(vbox.getChildren().size() - 1);
+									}
+									else {
+										labelHeader.setGraphic(createArrowPath(20, true));
+										vbox.getChildren().add(tmp);
+									}
+								}
+							}
+						});
+						vbox.getChildren().add(labelHeader);
+						if(!item.isHidden()){
+							labelHeader.setGraphic(createArrowPath(20, true));
+							vbox.getChildren().add(tmp);
+						}
+					}
+					else {
+						setGraphic(null);
+					}
+					setGraphic(vbox);
+					
+					ContextMenu contextMenu = new ContextMenu();
+					MenuItem join = new MenuItem();
+					join.setText("Joindre le salon");
+					join.setOnAction(event -> {joinRoom(new String[]{"/join", item.getRoomName()});});
+					MenuItem leave = new MenuItem();
+					leave.setText("Quitter le salon");
+					leave.setOnAction(event -> {leaveRoom(new String[]{"/leave"});});
+					MenuItem labelCreate = new MenuItem();
+					TextField fieldNameRoom = new TextField("Nom du Salon");
+					fieldNameRoom.setOnKeyPressed(e -> {
+						if (e.getCode() == KeyCode.ENTER)
+							createRoom(new String[]{"/join", fieldNameRoom.getText()});
+					});
+					labelCreate.setGraphic(fieldNameRoom);
+					MenuItem create = new MenuItem();
+					create.setText("Créer un nouveau salon");
+					create.setOnAction(event -> {
+						contextMenu.getItems().add(labelCreate);
+						contextMenu.getItems().remove(create);
+					});
+					MenuItem destroy = new MenuItem();
+					destroy.setText("Détruire le salon");
+					destroy.setOnAction(event -> {destroyRoom(new String[]{"/destroy", item.getRoomName()});});
+					if(!empty && item != null){
+						contextMenu.getItems().addAll(client.room.equals(item.getRoomName())?leave:join, destroy);
+						
+					}
+					contextMenu.getItems().add(create);
+					setContextMenu(contextMenu);
+				}
+			});
+		}
+	}
+	
+	public class RoomCell2 extends ListCell<String> {
 		@Override 
 		protected void updateItem(String roomName, boolean empty) {
 			super.updateItem(roomName, empty);

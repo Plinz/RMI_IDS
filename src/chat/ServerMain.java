@@ -6,11 +6,11 @@ import java.rmi.server.UnicastRemoteObject;
 
 public class ServerMain {
 	  public static void  main(String [] args) {
-		  try {			
+		  try {	
 			ServerInterface serverInterface = new Server();
-			ServerInterface s_stub = (ServerInterface) UnicastRemoteObject.exportObject(serverInterface, 0);
+			ServerInterface s_stub = (ServerInterface) UnicastRemoteObject.exportObject(serverInterface, 1099);
 			
-			Registry registry = LocateRegistry.createRegistry(2020);
+			Registry registry = LocateRegistry.createRegistry(1099);
 			registry.bind("ServerInterface", s_stub);
 			System.out.println ("Server ready");
 

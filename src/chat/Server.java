@@ -11,7 +11,6 @@ public class Server implements ServerInterface {
 	private HashMap<String, String> usersRooms;
 
 	public Server(){
-		
 		rooms = new HashMap<String, Room>();
 		usersRooms = new HashMap<String, String>();
 		clientInLobby = new ArrayList<ClientInterface>();
@@ -19,15 +18,18 @@ public class Server implements ServerInterface {
 
 	@Override
 	public boolean join(ClientInterface client) throws RemoteException {
+		System.out.println("JOIN");
+		String name = client.getName();
+		System.out.println(name);
 		boolean success = !clientInLobby.stream().filter(c -> {
 			try {
-				return c.getName().equals(client.getName());
+				return c.getName().equals(name);
 			} catch (RemoteException e) {
 				e.printStackTrace();
 			}
 			return false;
 		}).findAny().isPresent();
-		if (success && !usersRooms.containsKey(client.getName())){
+		if (success && !usersRooms.containsKey(name)){
 			clientInLobby.add(client);
 			rooms.keySet().forEach(r -> {
 				try {
@@ -61,6 +63,7 @@ public class Server implements ServerInterface {
 	public boolean createRoom(ClientInterface client, String name) throws RemoteException {
 		boolean success = false;
 		if(!name.trim().isEmpty() && !rooms.containsKey(name)){
+			success = true;
 			rooms.put(name, new Room(name, client));
 			rooms.forEach((n, r) -> r.roomCreated(name));
 			clientInLobby.forEach(c -> {
@@ -70,15 +73,17 @@ public class Server implements ServerInterface {
 					e.printStackTrace();
 				}
 			});
-			success = true;
+			
 		}
 		return success;
 	}
 	
 	@Override
-	public void destroyRoom(ClientInterface client, String name) throws RemoteException {
+	public boolean destroyRoom(ClientInterface client, String name) throws RemoteException {
 		Room toDestroy = rooms.get(name);
-		if (toDestroy.getOwner().getName().equals(client.getName())){
+		boolean success = false;
+		if (toDestroy.getOwner().equals(client.getName())){
+			success = true;
 			toDestroy.destroy();
 			rooms.forEach((n, r) -> r.roomDestroyed(name));
 			clientInLobby.forEach(c -> {
@@ -90,6 +95,7 @@ public class Server implements ServerInterface {
 			});
 			rooms.remove(name);
 		}
+		return success;
 	}
 
 	@Override
@@ -140,8 +146,14 @@ public class Server implements ServerInterface {
 	public void sendMessage(ClientInterface client, Message message) throws RemoteException {
 		String name = client.getName();
 		String room = usersRooms.get(name);
-		if (room != null){
+		if (!message.isPrivate() && room != null){
 			rooms.get(room).sendMessage(message);
+		} else if (message.isPrivate()){
+			String roomTo = usersRooms.get(message.getTo());
+			if (roomTo != null && room != null){
+				rooms.get(room).sendMessage(message);
+				rooms.get(roomTo).sendMessage(message);
+			}
 		}
 	}
 

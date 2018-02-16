@@ -13,6 +13,11 @@ public class Server implements ServerInterface {
 		usersRooms = new HashMap<String, String>();
 	}
 
+	/**
+	 * Permet de joindre le serveur
+	 * @param client L'object client voulant se joindre le serveur
+	 * @return True si le client a pu joindre le serveur
+	 */
 	@Override
 	public boolean join(ClientInterface client) throws RemoteException {
 		String name = client.getName();
@@ -36,7 +41,11 @@ public class Server implements ServerInterface {
 		}
 		return success;
 	}
-
+	
+	/**
+	 * Permet de quitter complétement le serveur
+	 * @param client L'object client voulant quitter
+	 */
 	@Override
 	public void leave(ClientInterface client) throws RemoteException {
 		String name = client.getName();
@@ -50,9 +59,10 @@ public class Server implements ServerInterface {
 
 
 	/**
-	 * Créer un salon de discution de nom name
-	 * @param client L'object client créant la discution
-	 * @param name Le nom du salon de discution
+	 * Créer un salon de discussion de nom name
+	 * @param client L'object client créant le salon
+	 * @param name Le nom du salon de discussion
+	 * @return True si le salon a bien été créé
 	 */
 	@Override
 	public boolean createRoom(ClientInterface client, String name) throws RemoteException {
@@ -65,6 +75,11 @@ public class Server implements ServerInterface {
 		return success;
 	}
 	
+	/**
+	 * Détruire un salon de discussion de nom name
+	 * @param client L'object client voulant détruire le salon
+	 * @param name Le nom du salon à détruire
+	 */
 	@Override
 	public boolean destroyRoom(ClientInterface client, String name) throws RemoteException {
 		Room toDestroy = rooms.get(name);
@@ -79,8 +94,8 @@ public class Server implements ServerInterface {
 	}
 
 	/**
-	 * Permet à un client de rejoindre un salon de discution existant dont le nom room est passé en
-	 * paramètre. Le client à ajouter de doit pas être déjà présent dans un salon de discution
+	 * Permet à un client de rejoindre un salon de discussion existant dont le nom room est passé en
+	 * paramètre. Le client à ajouter ne doit pas être déjà présent dans un salon de discussion
 	 * @param client l'object client joignant le salon
 	 * @param room le nom du salon à rejoindre
 	 */
@@ -103,7 +118,7 @@ public class Server implements ServerInterface {
 	}
 
 	/**
-	 * Permet à un client de quitter un salon de discution
+	 * Permet à un client de quitter un salon de discussion
 	 * @param client l'object client quittant le salon
 	 */
 	@Override
@@ -120,7 +135,7 @@ public class Server implements ServerInterface {
 	}
 
 	/**
-	 * Le client envoi un message public ou privé. Si le message est public alors il est envoyé
+	 * Le client envoie un message public ou privé. Si le message est public alors il est envoyé
 	 * à tout le salon. Sinon le message comporte le nom de l'utilisateur à qui envoyer le message en privé
 	 * @param client L'object client quittant le salon
 	 * @param message Le message a envoyer

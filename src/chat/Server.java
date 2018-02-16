@@ -1,36 +1,23 @@
 package chat;
 
 import java.rmi.RemoteException;
-import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.List;
 
 public class Server implements ServerInterface {
-	private List<ClientInterface> clientInLobby;
 	private HashMap<String, Room> rooms;
 	private HashMap<String, String> usersRooms;
 
 	public Server(){
 		rooms = new HashMap<String, Room>();
+		rooms.put("Accueil", new Room("Accueil", null));
 		usersRooms = new HashMap<String, String>();
-		clientInLobby = new ArrayList<ClientInterface>();
 	}
 
 	@Override
 	public boolean join(ClientInterface client) throws RemoteException {
-		System.out.println("JOIN");
 		String name = client.getName();
-		System.out.println(name);
-		boolean success = !clientInLobby.stream().filter(c -> {
-			try {
-				return c.getName().equals(name);
-			} catch (RemoteException e) {
-				e.printStackTrace();
-			}
-			return false;
-		}).findAny().isPresent();
-		if (success && !usersRooms.containsKey(name)){
-			clientInLobby.add(client);
+		boolean success = false;
+		if (!usersRooms.containsKey(name)){
 			rooms.keySet().forEach(r -> {
 				try {
 					client.roomCreated(r);
@@ -38,7 +25,6 @@ public class Server implements ServerInterface {
 					e.printStackTrace();
 				}
 			});
-			success = true;
 			usersRooms.forEach((u, r) -> {
 				try {
 					client.userJoin(u, r);
@@ -46,16 +32,20 @@ public class Server implements ServerInterface {
 					e.printStackTrace();
 				}
 			});
-		} else {
-			success = false;
+			success = joinRoom(client, "Accueil");
 		}
 		return success;
 	}
 
 	@Override
 	public void leave(ClientInterface client) throws RemoteException {
-		if(clientInLobby.contains(client)){
-			clientInLobby.remove(client);
+		String name = client.getName();
+		String room = usersRooms.get(name);
+		System.out.println("Leave Room "+name+ " "+room);
+		if (room != null){
+			rooms.get(room).leave(client);
+			usersRooms.remove(name);
+			rooms.forEach((n, r) -> r.userLeave(name, room));
 		}
 	}
 
@@ -71,15 +61,7 @@ public class Server implements ServerInterface {
 		if(!name.trim().isEmpty() && !rooms.containsKey(name)){
 			success = true;
 			rooms.put(name, new Room(name, client));
-			rooms.forEach((n, r) -> r.roomCreated(name));
-			clientInLobby.forEach(c -> {
-				try {
-					c.roomCreated(name);
-				} catch (RemoteException e) {
-					e.printStackTrace();
-				}
-			});
-			
+			rooms.forEach((n, r) -> r.roomCreated(name));		
 		}
 		return success;
 	}
@@ -92,13 +74,6 @@ public class Server implements ServerInterface {
 			success = true;
 			toDestroy.destroy();
 			rooms.forEach((n, r) -> r.roomDestroyed(name));
-			clientInLobby.forEach(c -> {
-				try {
-					c.roomDestroyed(name);
-				} catch (RemoteException e) {
-					e.printStackTrace();
-				}
-			});
 			rooms.remove(name);
 		}
 		return success;
@@ -116,21 +91,16 @@ public class Server implements ServerInterface {
 		boolean success = false;
 		if (rooms.containsKey(room) && !usersRooms.getOrDefault(name, "").equals(room)){
 			if (usersRooms.containsKey(name)){
-				leaveRoom(client);
+				rooms.forEach((n, r) -> r.userLeave(name, usersRooms.get(name)));
+				rooms.get(usersRooms.get(name)).leave(client);
+				usersRooms.remove(name);
 			}
 			rooms.get(room).join(client);
 			usersRooms.put(client.getName(), room);
-			clientInLobby.remove(client);
 			rooms.forEach((n, r) -> r.userJoin(name, room));
-			clientInLobby.forEach(c -> {
-				try {
-					c.userJoin(name, room);
-				} catch (RemoteException e) {
-					e.printStackTrace();
-				}
-			});
 			success = true;
 		}
+		usersRooms.forEach((n,r) -> {System.out.println("Join fin "+n+" "+r);});
 		return success;
 	}
 
@@ -143,19 +113,14 @@ public class Server implements ServerInterface {
 		String name = client.getName();
 		String room = usersRooms.get(name);
 		System.out.println("Leave Room "+name+ " "+room);
-		if (room != null){
+		if (room != null && !room.equals("Accueil")){
+			rooms.forEach((n, r) -> r.userLeave(name, room));
 			rooms.get(room).leave(client);
 			usersRooms.remove(name);
-			clientInLobby.add(client);
-			rooms.forEach((n, r) -> r.userLeave(name, room));
-			clientInLobby.forEach(c -> {
-				try {
-					c.userLeave(name, room);
-				} catch (RemoteException e) {
-					e.printStackTrace();
-				}
-			});
+			if (!room.equals("Accueil"))
+				joinRoom(client, "Accueil");
 		}
+		usersRooms.forEach((n,r) -> {System.out.println("Leave fin "+n+" "+r);});
 	}
 
 	/**

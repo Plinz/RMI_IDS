@@ -24,8 +24,9 @@ public class Room {
 
 	public Room(String name, ClientInterface owner) {
 		this.name = name;
+		
 		try {
-			this.owner = owner.getName();
+			this.owner = owner!=null?owner.getName():"";
 		} catch (RemoteException e1) {
 			e1.printStackTrace();
 		}

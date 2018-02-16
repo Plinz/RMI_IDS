@@ -54,6 +54,7 @@ public class ClientGUI extends Application implements Observer{
 
 	private ListView<RoomExpendable> roomsListView;
 
+	private BorderPane root;
 	private TextField chatMessage;
 	private TextFlow chatRoom;
 	private ScrollPane scrollPaneChat;
@@ -91,7 +92,7 @@ public class ClientGUI extends Application implements Observer{
 	}
 
 	protected Scene Chat() {
-		BorderPane root = new BorderPane();
+		root = new BorderPane();
 		scrollPaneChat = new ScrollPane();
 		chatMessage = new TextField();
 		chatRoom = new TextFlow();
@@ -173,6 +174,7 @@ public class ClientGUI extends Application implements Observer{
 		printRedMessage(
 				"Liste des commandes :\n"
 				+ "/con <Pseudo> <Serveur> <Port> Connexion à un serveur\n"
+				+ "/con <Pseudo> Connexion au server local\n"
 				+ "/exit Deconnexion du serveur\n"
 				+ "/join <Salon> Rejoindre un salon de discussion\n"
 				+ "/leave Quitter le salon de discussion\n"
@@ -225,8 +227,8 @@ public class ClientGUI extends Application implements Observer{
 			help();
 		} else if (tokens.length != 1){
 			printRedMessage("Usage :\n/leave Quitter la room\n");
-		} else if (client.room.trim().isEmpty()) {
-			printRedMessage("Vous n'êtes dans aucune room\n");
+		} else if (client.room.equals("Accueil")){
+			printRedMessage("Vous ne pouvez pas quitter la room Accueil\n");
 		} else {
 			try {
 				serverInterface.leaveRoom(c_stub);
@@ -292,6 +294,7 @@ public class ClientGUI extends Application implements Observer{
 			c_stub = (ClientInterface) UnicastRemoteObject.exportObject(client, portToExport);
 			if (serverInterface.join(c_stub)){
 				chatRoom.getChildren().clear();
+				client.room = "Accueil";
 				printRedMessage("Vous êtes bien connecté sur le serveur\n");
 			} else {
 				printRedMessage("Impossible de rejoindre le serveur : nom déjà utilisé\n");
@@ -310,8 +313,6 @@ public class ClientGUI extends Application implements Observer{
 		if(serverInterface == null){
 			printRedMessage("Vous n'êtes connecté à aucun serveur\n");
 			help();
-		} else if (client.room.trim().isEmpty()) {
-			printRedMessage("Vous n'êtes dans aucune room\n");
 		} else {
 			try {
 				serverInterface.sendMessage(c_stub, new Message(client.getName(), "all", String.join(" ", tokens), false));
@@ -516,7 +517,8 @@ public class ClientGUI extends Application implements Observer{
 					leave.setText("Quitter le salon");
 					leave.setOnAction(event -> {leaveRoom(new String[]{"/leave"});});
 					MenuItem labelCreate = new MenuItem();
-					TextField fieldNameRoom = new TextField("Nom du Salon");
+					TextField fieldNameRoom = new TextField();
+					fieldNameRoom.setPromptText("Nom du salon");
 					fieldNameRoom.setOnKeyPressed(e -> {
 						if (e.getCode() == KeyCode.ENTER)
 							createRoom(new String[]{"/join", fieldNameRoom.getText()});
@@ -525,73 +527,19 @@ public class ClientGUI extends Application implements Observer{
 					MenuItem create = new MenuItem();
 					create.setText("Créer un nouveau salon");
 					create.setOnAction(event -> {
+						contextMenu.getItems().clear();
 						contextMenu.getItems().add(labelCreate);
-						contextMenu.getItems().remove(create);
+						contextMenu.show((Node) fieldNameRoom, contextMenu.getAnchorX(), contextMenu.getAnchorY());
 					});
 					MenuItem destroy = new MenuItem();
 					destroy.setText("Détruire le salon");
 					destroy.setOnAction(event -> {destroyRoom(new String[]{"/destroy", item.getRoomName()});});
+					
 					if(!empty && item != null){
-						contextMenu.getItems().addAll(client.room.equals(item.getRoomName())?leave:join, destroy);
-						
+						contextMenu.getItems().add(client.room.equals(item.getRoomName())?leave:join);
 					}
 					contextMenu.getItems().add(create);
-					setContextMenu(contextMenu);
-				}
-			});
-		}
-	}
-	
-	public class RoomCell2 extends ListCell<String> {
-		@Override 
-		protected void updateItem(String roomName, boolean empty) {
-			super.updateItem(roomName, empty);
-			
-			Platform.runLater(new Runnable() {
-				@Override
-				public void run() {
-					if (empty || roomName == null || roomName.equals("")){
-						setGraphic(null);
-						setText(null);
-					} else {
-						setText(roomName);
-						setStyle("-fx-font-weight: bold;");
-					}
-				}
-			});
-
-			ContextMenu contextMenu = new ContextMenu();
-			MenuItem join = new MenuItem();
-			join.setText("Joindre");
-			join.setOnAction(event -> {
-				try {
-					chatRoom.getChildren().clear();
-					serverInterface.joinRoom(c_stub, roomName);
-					serverInterface.getHistory(c_stub);
-				} catch (RemoteException e) {
-					e.printStackTrace();
-				}				
-			});
-			MenuItem leave = new MenuItem();
-			leave.setText("Quitter");
-			leave.setOnAction(event -> {
-				try {
-					chatRoom.getChildren().clear();
-					serverInterface.leaveRoom(c_stub);
-				} catch (RemoteException e) {
-					e.printStackTrace();
-				}
-			});
-			if (client.room.equals(roomName)){
-				contextMenu.getItems().add(leave);
-			} else {
-				contextMenu.getItems().add(join);
-			}
-			
-			emptyProperty().addListener((obs, wasEmpty, isNowEmpty) -> {
-				if (isNowEmpty) {
-					setContextMenu(null);
-				} else {
+					contextMenu.setAutoHide(false);
 					setContextMenu(contextMenu);
 				}
 			});

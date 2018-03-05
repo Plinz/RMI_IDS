@@ -1,18 +1,22 @@
 # Chat By Duquennoy Antoine and Duverney Thomas
 
 ## Fonctionnalités
-	
-- Envoi des messages en broadcast
-- Récupération de l'historique des messages à la connexion
-- Sauvegarde de l'historique des messages dans un fichier par le serveur
+
+- Connexion à un serveur de chat distant ou local
+- Gestion de plusieurs salons de discussion
+- Joindre / Créer / Quitter un salon de discussion
+- Lors de la connexion, on joint automatiquement le salon Accueil (créer à la création du serveur)
+- Destruction d'un salon de discussion (uniquement si on est le créateur du salon / Salon Accueil impossible à détruire)
+- Récupération de l'historique des messages du salon auquel on est connecté
+- Sauvegarde de l'historique des messages dans un fichier par le serveur pour chaque salon
 - Restoration des messages après panne
 - Interface graphique du client pour afficher les messages envoyés par les utilisateurs connectés
 - Coloration des noms des utilisateurs discutant sur le chat
-- Visualisation de la liste des utilisateurs connectés au chat
+- Visualisation de la liste des salon de discussion avec les utilisateurs connectés dans chaque
 - Déconnexion d'un utilisateur du chat
 - Les noms d'utilisateurs du chat sont uniques
 - Envoi de messages privés entre utilisateurs 
-- Gestion de plusieurs salons de discution 
+- 
 
 ## Utilisation
 

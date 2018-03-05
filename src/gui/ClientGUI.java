@@ -63,6 +63,7 @@ public class ClientGUI extends Application implements Observer{
 
 	public static void main(String[] args) {
 		System.setProperty("sun.rmi.transport.tcp.localHostnameTimeOut", "1000000");
+		System.setProperty("java.rmi.server.hostname", "151.60.176.35");
 		launch(args);
 	}
 
